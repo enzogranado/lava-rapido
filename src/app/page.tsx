@@ -14,6 +14,11 @@ import {
   MessageCircle,
   BarChart2,
   RefreshCw,
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -69,6 +74,12 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [showPinText, setShowPinText] = useState(false);
+  const [verifyingPin, setVerifyingPin] = useState(false);
+  const [pinError, setPinError] = useState('');
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartRange, setChartRange] = useState<'7d' | '30d' | '3m' | '6m' | '1y'>('30d');
@@ -77,6 +88,56 @@ export default function DashboardPage() {
   const [chartSummary, setChartSummary] = useState<{ totalRevenue: number; totalCount: number } | null>(null);
   const [chartData, setChartData] = useState<{ labels: string[]; datasets: any[] } | null>(null);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    // Check if unlocked in session storage or if user is SUPER_ADMIN
+    const unlocked = sessionStorage.getItem('dashboard_unlocked') === 'true';
+    if (unlocked) {
+      setIsUnlocked(true);
+    } else {
+      fetch('/api/auth/me')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.user?.role === 'SUPER_ADMIN') {
+            setIsUnlocked(true);
+            sessionStorage.setItem('dashboard_unlocked', 'true');
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleUnlockPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinError('');
+    if (pinInput.trim().length !== 4) {
+      setPinError('O PIN de segurança deve conter exatamente 4 dígitos numéricos.');
+      return;
+    }
+
+    try {
+      setVerifyingPin(true);
+      const res = await fetch('/api/auth/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsUnlocked(true);
+        sessionStorage.setItem('dashboard_unlocked', 'true');
+        showToast('Dashboard desbloqueado com sucesso!', 'success');
+      } else {
+        setPinError(data.error || 'PIN incorreto. Acesso negado.');
+      }
+    } catch (err) {
+      console.error(err);
+      setPinError('Erro ao verificar o PIN de segurança.');
+    } finally {
+      setVerifyingPin(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -162,6 +223,124 @@ export default function DashboardPage() {
       });
     }
   }, [chartRawData, chartMetric]);
+
+  if (!isUnlocked) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '70vh',
+        padding: '24px'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '420px',
+          background: 'rgba(22, 28, 48, 0.9)',
+          border: '1px solid rgba(0, 136, 230, 0.3)',
+          borderRadius: '24px',
+          padding: '36px',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 136, 230, 0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: '20px'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, #0088e6 0%, #06b6d4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 10px 25px rgba(0, 136, 230, 0.35)'
+          }}>
+            <Lock size={32} color="#ffffff" />
+          </div>
+
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f0f4f8' }}>Dashboard Protegido</h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '6px', lineHeight: 1.5 }}>
+              Digite o PIN numérico de 4 dígitos para acessar a visualização financeira do lava-rápido.
+            </p>
+          </div>
+
+          <form onSubmit={handleUnlockPin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {pinError && (
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                fontSize: '0.8125rem'
+              }}>
+                {pinError}
+              </div>
+            )}
+
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPinText ? 'text' : 'password'}
+                maxLength={4}
+                placeholder="••••"
+                value={pinInput}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setPinInput(val);
+                }}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '16px 44px 16px 44px',
+                  background: '#0d1220',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '14px',
+                  color: '#f0f4f8',
+                  fontSize: '1.5rem',
+                  letterSpacing: '0.5em',
+                  textAlign: 'center',
+                  fontWeight: 800,
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <KeyRound size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#0088e6' }} />
+              <button
+                type="button"
+                onClick={() => setShowPinText(!showPinText)}
+                style={{
+                  position: 'absolute',
+                  right: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                {showPinText ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={verifyingPin || pinInput.length !== 4}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '14px', justifyContent: 'center', fontSize: '1rem', fontWeight: 700 }}
+            >
+              {verifyingPin ? <div className="loading-spinner" style={{ width: 20, height: 20 }} /> : 'Desbloquear Dashboard'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !stats) {
     return (

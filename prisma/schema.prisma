@@ -20,6 +20,10 @@ model Tenant {
   paymentStatus           String   @default("PENDING") // PAID, PENDING, OVERDUE
   monthlyFee              Float    @default(99.00)
   lastPaymentDate         DateTime?
+  dashboardPin            String   @default("1234")
+  pendingPinChange        String?
+  pinChangeReason         String?
+  pinChangeStatus         String?  // null, PENDING, APPROVED, REJECTED
   inactiveDaysLimit       Int      @default(45)
   whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
   createdAt               DateTime @default(now())

@@ -83,6 +83,10 @@ export async function GET(request: NextRequest) {
           paymentStatus: t.paymentStatus,
           monthlyFee: t.monthlyFee,
           lastPaymentDate: t.lastPaymentDate,
+          dashboardPin: t.dashboardPin,
+          pendingPinChange: t.pendingPinChange,
+          pinChangeReason: t.pinChangeReason,
+          pinChangeStatus: t.pinChangeStatus,
           createdAt: t.createdAt,
           counts: {
             customers: t._count.customers,
@@ -123,11 +127,13 @@ export async function GET(request: NextRequest) {
 
     const pendingTenants = tenantsWithMetrics.filter((t) => t.status === 'PENDING' || (!t.active && t.status !== 'REJECTED'));
     const approvedTenants = tenantsWithMetrics.filter((t) => t.status === 'APPROVED' && t.active);
+    const pinChangeRequests = tenantsWithMetrics.filter((t) => t.pinChangeStatus === 'PENDING' && Boolean(t.pendingPinChange));
 
     // Global Platform Totals
     const platformTotalTenants = approvedTenants.length;
     const platformActiveTenants = approvedTenants.filter((t) => t.active).length;
     const platformPendingApprovals = pendingTenants.length;
+    const platformPinRequestsCount = pinChangeRequests.length;
     const platformTotalRevenueMonth = approvedTenants.reduce((sum, t) => sum + t.revenueMonth, 0);
     const platformTotalWashesMonth = approvedTenants.reduce((sum, t) => sum + t.washesMonth, 0);
     const platformTotalRevenueAllTime = approvedTenants.reduce((sum, t) => sum + t.revenueTotal, 0);
@@ -137,12 +143,14 @@ export async function GET(request: NextRequest) {
         totalTenants: platformTotalTenants,
         activeTenants: platformActiveTenants,
         pendingApprovals: platformPendingApprovals,
+        pinRequestsCount: platformPinRequestsCount,
         revenueMonth: platformTotalRevenueMonth,
         washesMonth: platformTotalWashesMonth,
         revenueTotal: platformTotalRevenueAllTime,
       },
       pendingTenants,
       approvedTenants,
+      pinChangeRequests,
       tenants: tenantsWithMetrics,
       globalCustomers,
     });
@@ -152,7 +160,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH /api/admin/tenants — Update Tenant (Approve, Reject, Toggle Active, Payment Status)
+// PATCH /api/admin/tenants — Update Tenant (Approve, Reject, Toggle Active, Payment Status, PIN Change Approval)
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getSession(request);
@@ -179,6 +187,22 @@ export async function PATCH(request: NextRequest) {
       updateData = {
         status: 'REJECTED',
         active: false,
+      };
+    } else if (action === 'APPROVE_PIN_CHANGE') {
+      const targetTenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      if (targetTenant?.pendingPinChange) {
+        updateData = {
+          dashboardPin: targetTenant.pendingPinChange,
+          pendingPinChange: null,
+          pinChangeReason: null,
+          pinChangeStatus: 'APPROVED',
+        };
+      }
+    } else if (action === 'REJECT_PIN_CHANGE') {
+      updateData = {
+        pendingPinChange: null,
+        pinChangeReason: null,
+        pinChangeStatus: 'REJECTED',
       };
     } else if (action === 'TOGGLE_ACTIVE') {
       updateData = { active };

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Droplets, Store, User, Mail, Lock, Phone, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Droplets, Store, User, Mail, Lock, Phone, ArrowRight, CheckCircle2, Eye, EyeOff, Info, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CadastroPage() {
@@ -13,8 +13,10 @@ export default function CadastroPage() {
     phone: '',
     email: '',
     password: '',
+    dashboardPin: '1234',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showPinInfo, setShowPinInfo] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -268,6 +270,78 @@ export default function CadastroPage() {
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  PIN do Dashboard (4 Dígitos) *
+                  <button
+                    type="button"
+                    onClick={() => setShowPinInfo(!showPinInfo)}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      color: '#38bdf8',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                    title="Por que preciso de um PIN?"
+                  >
+                    <Info size={13} />
+                  </button>
+                </label>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Padrão: 1234</span>
+              </div>
+
+              {showPinInfo && (
+                <div style={{
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  fontSize: '0.8125rem',
+                  color: '#38bdf8',
+                  lineHeight: 1.5
+                }}>
+                  ℹ️ <strong>Por que este PIN?</strong> O PIN numérico de 4 dígitos é exigido para desbloquear a visualização das métricas de faturamento no Dashboard. Isso impede que colaboradores e funcionários vejam os valores financeiros que entram no lava-rápido.
+                </div>
+              )}
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  name="dashboardPin"
+                  maxLength={4}
+                  placeholder="Ex: 1234"
+                  value={formData.dashboardPin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setFormData((prev) => ({ ...prev, dashboardPin: val }));
+                  }}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px 14px 44px',
+                    background: '#0d1220 !important',
+                    border: '1px solid rgba(255, 255, 255, 0.12) !important',
+                    borderRadius: '12px',
+                    color: '#f0f4f8 !important',
+                    fontSize: '1rem',
+                    letterSpacing: '0.2em',
+                    fontWeight: 700,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <ShieldCheck size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#0088e6' }} />
               </div>
             </div>
 

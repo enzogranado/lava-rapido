@@ -18,6 +18,7 @@ import {
   Building,
   UserCheck,
   FileText,
+  KeyRound,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -34,6 +35,10 @@ interface TenantMetric {
   paymentStatus: 'PAID' | 'PENDING' | 'OVERDUE';
   monthlyFee: number;
   lastPaymentDate: string | null;
+  dashboardPin?: string;
+  pendingPinChange?: string | null;
+  pinChangeReason?: string | null;
+  pinChangeStatus?: string | null;
   createdAt: string;
   counts: {
     customers: number;
@@ -61,6 +66,7 @@ interface AdminSummary {
   totalTenants: number;
   activeTenants: number;
   pendingApprovals: number;
+  pinRequestsCount?: number;
   revenueMonth: number;
   washesMonth: number;
   revenueTotal: number;
@@ -71,6 +77,7 @@ export default function AdminPage() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [pendingTenants, setPendingTenants] = useState<TenantMetric[]>([]);
   const [approvedTenants, setApprovedTenants] = useState<TenantMetric[]>([]);
+  const [pinChangeRequests, setPinChangeRequests] = useState<TenantMetric[]>([]);
   const [allTenants, setAllTenants] = useState<TenantMetric[]>([]);
   const [globalCustomers, setGlobalCustomers] = useState<GlobalCustomer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +95,7 @@ export default function AdminPage() {
         setSummary(data.summary);
         setPendingTenants(data.pendingTenants || []);
         setApprovedTenants(data.approvedTenants || []);
+        setPinChangeRequests(data.pinChangeRequests || []);
         setAllTenants(data.tenants || []);
         setGlobalCustomers(data.globalCustomers || []);
       } else {
@@ -105,7 +113,11 @@ export default function AdminPage() {
     fetchAdminData();
   }, []);
 
-  const handleTenantAction = async (tenantId: string, action: 'APPROVE' | 'REJECT' | 'TOGGLE_ACTIVE' | 'SET_PAYMENT_STATUS', extraData?: any) => {
+  const handleTenantAction = async (
+    tenantId: string,
+    action: 'APPROVE' | 'REJECT' | 'TOGGLE_ACTIVE' | 'SET_PAYMENT_STATUS' | 'APPROVE_PIN_CHANGE' | 'REJECT_PIN_CHANGE',
+    extraData?: any
+  ) => {
     try {
       const res = await fetch('/api/admin/tenants', {
         method: 'PATCH',
@@ -118,6 +130,8 @@ export default function AdminPage() {
         if (action === 'REJECT') showToast('Cadastro de Lava-Rápido recusado.', 'info');
         if (action === 'TOGGLE_ACTIVE') showToast('Status de acesso alterado.', 'success');
         if (action === 'SET_PAYMENT_STATUS') showToast('Status da mensalidade atualizado.', 'success');
+        if (action === 'APPROVE_PIN_CHANGE') showToast('Troca de PIN aprovada com sucesso!', 'success');
+        if (action === 'REJECT_PIN_CHANGE') showToast('Solicitação de troca de PIN recusada.', 'info');
         fetchAdminData();
       } else {
         showToast('Erro ao executar ação no lava-rápido', 'error');
@@ -359,6 +373,93 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
+
+              {/* SEÇÃO DE SOLICITAÇÕES DE TROCA DE PIN DO DASHBOARD */}
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <KeyRound size={22} color="#a855f7" />
+                  Solicitações de Troca de PIN do Dashboard ({pinChangeRequests.length})
+                </h3>
+
+                {pinChangeRequests.length === 0 ? (
+                  <div className="card" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                    Nenhuma solicitação de troca de PIN pendente no momento.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                    {pinChangeRequests.map((tenant) => (
+                      <div
+                        key={tenant.id}
+                        style={{
+                          background: 'rgba(22, 28, 48, 0.9)',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          borderRadius: '16px',
+                          padding: '24px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.3)', fontSize: '0.75rem', marginBottom: '8px' }}>
+                              Troca de PIN Solicitada
+                            </span>
+                            <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#f0f4f8' }}>{tenant.name}</h4>
+                            <span style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>E-mail: {tenant.email}</span>
+                          </div>
+                          <KeyRound size={28} color="#a855f7" />
+                        </div>
+
+                        <div style={{
+                          background: 'rgba(13, 18, 32, 0.6)',
+                          borderRadius: '12px',
+                          padding: '14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          fontSize: '0.875rem'
+                        }}>
+                          <div>
+                            <strong style={{ color: '#94a3b8' }}>PIN Atual:</strong>{' '}
+                            <span style={{ color: '#ef4444', fontFamily: 'monospace', fontWeight: 700 }}>{tenant.dashboardPin || '1234'}</span>
+                          </div>
+                          <div>
+                            <strong style={{ color: '#94a3b8' }}>Novo PIN Solicitado:</strong>{' '}
+                            <span style={{ color: '#22c55e', fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.1em' }}>
+                              {tenant.pendingPinChange}
+                            </span>
+                          </div>
+                          <div style={{ marginTop: '4px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                            <strong style={{ color: '#38bdf8' }}>Motivo Informado pelo Cliente:</strong>
+                            <p style={{ color: '#f0f4f8', marginTop: '4px', fontStyle: 'italic', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px' }}>
+                              &quot;{tenant.pinChangeReason || 'Sem motivo detalhado'}&quot;
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                          <button
+                            className="btn btn-primary"
+                            style={{ flex: 1, background: '#22c55e', borderColor: '#22c55e', gap: '6px' }}
+                            onClick={() => handleTenantAction(tenant.id, 'APPROVE_PIN_CHANGE')}
+                          >
+                            <CheckCircle2 size={16} /> Aprovar Novo PIN
+                          </button>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', gap: '6px' }}
+                            onClick={() => handleTenantAction(tenant.id, 'REJECT_PIN_CHANGE')}
+                          >
+                            <XCircle size={16} /> Recusar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

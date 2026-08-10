@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Droplets, Store, User, Mail, Lock, Phone, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Droplets, Store, User, Mail, Lock, Phone, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CadastroPage() {
@@ -14,6 +14,7 @@ export default function CadastroPage() {
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,12 +23,15 @@ export default function CadastroPage() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const [successMsg, setSuccessMsg] = useState('');
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setLoading(false);
 
     try {
+      setLoading(true);
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,8 +44,12 @@ export default function CadastroPage() {
         throw new Error(data.error || 'Erro ao realizar cadastro');
       }
 
-      router.push('/');
-      router.refresh();
+      if (data.pendingApproval) {
+        setSuccessMsg(data.message || 'Cadastro realizado com sucesso! Suas informações foram enviadas para aprovação da administração.');
+      } else {
+        router.push('/');
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro ao cadastrar');
     } finally {
@@ -91,13 +99,25 @@ export default function CadastroPage() {
           backdropFilter: 'blur(20px)',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 136, 230, 0.08)'
         }}>
-          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            
-            {error && (
-              <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.875rem' }}>
-                {error}
+          {successMsg ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center', alignItems: 'center' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}>
+                <CheckCircle2 size={36} />
               </div>
-            )}
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f0f4f8' }}>Ficha Cadastral Enviada!</h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.9375rem', lineHeight: 1.6 }}>{successMsg}</p>
+              <Link href="/login" className="btn btn-primary" style={{ width: '100%', padding: '12px', justifyContent: 'center', marginTop: '10px' }}>
+                Ir para o Login
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              
+              {error && (
+                <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.875rem' }}>
+                  {error}
+                </div>
+              )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1' }}>Nome do Lava Rápido / Empresa *</label>
@@ -208,7 +228,7 @@ export default function CadastroPage() {
               <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1' }}>Criar Senha de Acesso *</label>
               <div style={{ position: 'relative' }}>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
@@ -217,7 +237,7 @@ export default function CadastroPage() {
                   minLength={6}
                   style={{
                     width: '100%',
-                    padding: '14px 16px 14px 44px',
+                    padding: '14px 44px 14px 44px',
                     background: '#0d1220 !important',
                     border: '1px solid rgba(255, 255, 255, 0.12) !important',
                     borderRadius: '12px',
@@ -228,6 +248,26 @@ export default function CadastroPage() {
                   }}
                 />
                 <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#0088e6' }} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -267,6 +307,7 @@ export default function CadastroPage() {
               )}
             </button>
           </form>
+          )}
         </div>
 
         {/* Footer link to Login */}

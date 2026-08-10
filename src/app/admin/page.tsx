@@ -1,7 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Store, DollarSign, Calendar, Users, Search, Power, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  ShieldCheck,
+  Store,
+  DollarSign,
+  Calendar,
+  Users,
+  Search,
+  Power,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
+  Building,
+  UserCheck,
+  FileText,
+} from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
@@ -13,6 +30,10 @@ interface TenantMetric {
   email: string;
   ownerName: string;
   active: boolean;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  paymentStatus: 'PAID' | 'PENDING' | 'OVERDUE';
+  monthlyFee: number;
+  lastPaymentDate: string | null;
   createdAt: string;
   counts: {
     customers: number;
@@ -25,19 +46,37 @@ interface TenantMetric {
   revenueTotal: number;
 }
 
+interface GlobalCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  tenantName: string;
+  tenantId: string;
+  totalVisits: number;
+  totalSpent: number;
+  createdAt: string;
+}
+
 interface AdminSummary {
   totalTenants: number;
   activeTenants: number;
+  pendingApprovals: number;
   revenueMonth: number;
   washesMonth: number;
   revenueTotal: number;
 }
 
 export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'tenants' | 'customers'>('overview');
   const [summary, setSummary] = useState<AdminSummary | null>(null);
-  const [tenants, setTenants] = useState<TenantMetric[]>([]);
+  const [pendingTenants, setPendingTenants] = useState<TenantMetric[]>([]);
+  const [approvedTenants, setApprovedTenants] = useState<TenantMetric[]>([]);
+  const [allTenants, setAllTenants] = useState<TenantMetric[]>([]);
+  const [globalCustomers, setGlobalCustomers] = useState<GlobalCustomer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const [searchTenant, setSearchTenant] = useState('');
+  const [searchCustomer, setSearchCustomer] = useState('');
   const { showToast } = useToast();
 
   const fetchAdminData = async () => {
@@ -47,7 +86,10 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setSummary(data.summary);
-        setTenants(data.tenants);
+        setPendingTenants(data.pendingTenants || []);
+        setApprovedTenants(data.approvedTenants || []);
+        setAllTenants(data.tenants || []);
+        setGlobalCustomers(data.globalCustomers || []);
       } else {
         showToast('Acesso restrito a administradores', 'error');
       }
@@ -63,49 +105,109 @@ export default function AdminPage() {
     fetchAdminData();
   }, []);
 
-  const toggleTenantStatus = async (tenantId: string, currentActive: boolean) => {
+  const handleTenantAction = async (tenantId: string, action: 'APPROVE' | 'REJECT' | 'TOGGLE_ACTIVE' | 'SET_PAYMENT_STATUS', extraData?: any) => {
     try {
       const res = await fetch('/api/admin/tenants', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, active: !currentActive }),
+        body: JSON.stringify({ tenantId, action, ...extraData }),
       });
 
       if (res.ok) {
-        showToast(`Status do lava-rápido alterado com sucesso`, 'success');
-        setTenants((prev) =>
-          prev.map((t) => (t.id === tenantId ? { ...t, active: !currentActive } : t))
-        );
+        if (action === 'APPROVE') showToast('Lava-Rápido aprovado com sucesso!', 'success');
+        if (action === 'REJECT') showToast('Cadastro de Lava-Rápido recusado.', 'info');
+        if (action === 'TOGGLE_ACTIVE') showToast('Status de acesso alterado.', 'success');
+        if (action === 'SET_PAYMENT_STATUS') showToast('Status da mensalidade atualizado.', 'success');
+        fetchAdminData();
       } else {
-        showToast('Erro ao alterar status', 'error');
+        showToast('Erro ao executar ação no lava-rápido', 'error');
       }
     } catch (err) {
       console.error(err);
-      showToast('Erro de conexão ao alterar status', 'error');
+      showToast('Erro de conexão com o servidor', 'error');
     }
   };
 
-  const filteredTenants = tenants.filter(
+  const filteredTenants = allTenants.filter(
     (t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+      t.name.toLowerCase().includes(searchTenant.toLowerCase()) ||
+      t.email.toLowerCase().includes(searchTenant.toLowerCase()) ||
+      t.ownerName.toLowerCase().includes(searchTenant.toLowerCase())
+  );
+
+  const filteredCustomers = globalCustomers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchCustomer.toLowerCase()) ||
+      c.phone.includes(searchCustomer) ||
+      c.tenantName.toLowerCase().includes(searchCustomer.toLowerCase())
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       
-      {/* Header */}
+      {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ShieldCheck size={28} color="#a855f7" />
-            Painel Administrador da Plataforma
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ShieldCheck size={30} color="#a855f7" />
+            Painel Administrador Master
           </h1>
           <p className="page-subtitle">
-            Gerenciamento global de lava-rápidos cadastrados, faturamento consolidado e status dos clientes
+            Aprovação de fichas cadastrais, controle de mensalidades, vendas e visão unificada da plataforma
           </p>
         </div>
+      </div>
+
+      {/* Tabs Navigation */}
+      <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        <button
+          className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('overview')}
+          style={{ gap: '8px' }}
+        >
+          <Building size={18} />
+          Visão Geral
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'approvals' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('approvals')}
+          style={{ gap: '8px', position: 'relative' }}
+        >
+          <Clock size={18} />
+          Aprovações Pendentes
+          {pendingTenants.length > 0 && (
+            <span style={{
+              background: '#ef4444',
+              color: '#ffffff',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '12px',
+              marginLeft: '4px'
+            }}>
+              {pendingTenants.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'tenants' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('tenants')}
+          style={{ gap: '8px' }}
+        >
+          <CreditCard size={18} />
+          Lava-Rápidos & Mensalidades
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'customers' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('customers')}
+          style={{ gap: '8px' }}
+        >
+          <Users size={18} />
+          Clientes da Plataforma ({globalCustomers.length})
+        </button>
       </div>
 
       {loading || !summary ? (
@@ -114,119 +216,323 @@ export default function AdminPage() {
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
-                <Store size={22} />
-              </div>
-              <div className="stat-card-value">{summary.totalTenants}</div>
-              <div className="stat-card-label">Lava-Rápidos Cadastrados ({summary.activeTenants} ativos)</div>
-            </div>
+          {/* TAB 1: VISÃO GERAL */}
+          {activeTab === 'overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-card-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+                    <Store size={22} />
+                  </div>
+                  <div className="stat-card-value">{summary.totalTenants}</div>
+                  <div className="stat-card-label">Lava-Rápidos Aprovados ({summary.activeTenants} ativos)</div>
+                </div>
 
-            <div className="stat-card">
-              <div className="stat-card-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
-                <DollarSign size={22} />
-              </div>
-              <div className="stat-card-value">{formatCurrency(summary.revenueMonth)}</div>
-              <div className="stat-card-label">Faturamento Global no Mês</div>
-            </div>
+                <div className="stat-card">
+                  <div className="stat-card-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                    <Clock size={22} />
+                  </div>
+                  <div className="stat-card-value">{summary.pendingApprovals}</div>
+                  <div className="stat-card-label">Fichas Cadastrais Pendentes</div>
+                </div>
 
-            <div className="stat-card">
-              <div className="stat-card-icon" style={{ background: 'rgba(0, 136, 230, 0.15)', color: '#0088e6' }}>
-                <Calendar size={22} />
-              </div>
-              <div className="stat-card-value">{summary.washesMonth}</div>
-              <div className="stat-card-label">Lavagens no Mês (Plataforma)</div>
-            </div>
+                <div className="stat-card">
+                  <div className="stat-card-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
+                    <DollarSign size={22} />
+                  </div>
+                  <div className="stat-card-value">{formatCurrency(summary.revenueMonth)}</div>
+                  <div className="stat-card-label">Vendas Globais no Mês</div>
+                </div>
 
-            <div className="stat-card">
-              <div className="stat-card-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
-                <Users size={22} />
+                <div className="stat-card">
+                  <div className="stat-card-icon" style={{ background: 'rgba(0, 136, 230, 0.15)', color: '#0088e6' }}>
+                    <Calendar size={22} />
+                  </div>
+                  <div className="stat-card-value">{summary.washesMonth}</div>
+                  <div className="stat-card-label">Lavagens no Mês (Plataforma)</div>
+                </div>
               </div>
-              <div className="stat-card-value">{formatCurrency(summary.revenueTotal)}</div>
-              <div className="stat-card-label">Faturamento Histórico Total</div>
-            </div>
-          </div>
 
-          {/* Tenants Table Section */}
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Lava-Rápidos Cadastrados na Plataforma</h3>
-              
-              {/* Search Bar */}
-              <div style={{ position: 'relative', width: '280px' }}>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Buscar lava-rápido ou e-mail..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ paddingLeft: '36px' }}
-                />
-                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              {/* Pendentes Highlight Banner if any */}
+              {pendingTenants.length > 0 && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <Clock size={28} color="#ef4444" />
+                    <div>
+                      <h4 style={{ fontWeight: 700, color: '#f0f4f8' }}>Existem {pendingTenants.length} Ficha(s) Cadastral(is) aguardando aprovação!</h4>
+                      <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Novos lava-rápidos se registraram e precisam da liberação para acessar o sistema.</p>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" onClick={() => setActiveTab('approvals')}>
+                    Ver Fichas Pendentes
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: APROVAÇÕES PENDENTES (FICHAS CADASTRAIS) */}
+          {activeTab === 'approvals' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Fichas Cadastrais em Análise ({pendingTenants.length})</h3>
               </div>
-            </div>
 
-            <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Lava-Rápido</th>
-                    <th>Proprietário / Contato</th>
-                    <th>Cadastrado Em</th>
-                    <th style={{ textAlign: 'right' }}>Lavagens (Mês)</th>
-                    <th style={{ textAlign: 'right' }}>Receita (Semana)</th>
-                    <th style={{ textAlign: 'right' }}>Receita (Mês)</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTenants.map((tenant) => (
-                    <tr key={tenant.id}>
-                      <td>
-                        <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{tenant.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>slug: {tenant.slug}</div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{tenant.ownerName}</div>
-                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>{tenant.email}</div>
-                        {tenant.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{tenant.phone}</div>}
-                      </td>
-                      <td>{formatDate(tenant.createdAt)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{tenant.washesMonth}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(tenant.revenueWeek)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-400)' }}>
-                        {formatCurrency(tenant.revenueMonth)}
-                      </td>
-                      <td>
-                        {tenant.active ? (
-                          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <CheckCircle size={12} /> Ativo
+              {pendingTenants.length === 0 ? (
+                <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-tertiary)' }}>
+                  <CheckCircle2 size={48} color="#22c55e" style={{ margin: '0 auto 12px' }} />
+                  <h4>Nenhuma ficha pendente de aprovação!</h4>
+                  <p style={{ fontSize: '0.875rem', marginTop: '6px' }}>Todos os lava-rápidos cadastrados já foram analisados.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                  {pendingTenants.map((tenant) => (
+                    <div
+                      key={tenant.id}
+                      style={{
+                        background: 'rgba(22, 28, 48, 0.9)',
+                        border: '1px solid rgba(0, 136, 230, 0.25)',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px',
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <span className="badge badge-warning" style={{ fontSize: '0.75rem', marginBottom: '8px' }}>
+                            Aguardando Aprovação
                           </span>
-                        ) : (
-                          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <AlertTriangle size={12} /> Inativo
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
+                          <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#f0f4f8' }}>{tenant.name}</h4>
+                          <span style={{ fontSize: '0.8125rem', color: '#38bdf8' }}>slug: {tenant.slug}</span>
+                        </div>
+                        <FileText size={28} color="#0088e6" />
+                      </div>
+
+                      <div style={{
+                        background: 'rgba(13, 18, 32, 0.6)',
+                        borderRadius: '12px',
+                        padding: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        fontSize: '0.875rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                      }}>
+                        <div><strong style={{ color: '#94a3b8' }}>Proprietário:</strong> <span style={{ color: '#f0f4f8' }}>{tenant.ownerName}</span></div>
+                        <div><strong style={{ color: '#94a3b8' }}>E-mail de Acesso:</strong> <span style={{ color: '#f0f4f8' }}>{tenant.email}</span></div>
+                        <div><strong style={{ color: '#94a3b8' }}>Telefone/WhatsApp:</strong> <span style={{ color: '#f0f4f8' }}>{tenant.phone || 'Não informado'}</span></div>
+                        <div><strong style={{ color: '#94a3b8' }}>Data do Cadastro:</strong> <span style={{ color: '#f0f4f8' }}>{formatDate(tenant.createdAt)}</span></div>
+                        <div><strong style={{ color: '#94a3b8' }}>Mensalidade Acordada:</strong> <span style={{ color: '#22c55e', fontWeight: 700 }}>{formatCurrency(tenant.monthlyFee)} /mês</span></div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                         <button
-                          className={`btn btn-sm ${tenant.active ? 'btn-danger' : 'btn-secondary'}`}
-                          onClick={() => toggleTenantStatus(tenant.id, tenant.active)}
-                          title={tenant.active ? 'Desativar acesso' : 'Ativar acesso'}
+                          className="btn btn-success"
+                          style={{ flex: 1, padding: '10px', justifyContent: 'center', fontWeight: 700 }}
+                          onClick={() => handleTenantAction(tenant.id, 'APPROVE')}
                         >
-                          <Power size={14} />
-                          {tenant.active ? 'Bloquear' : 'Ativar'}
+                          <CheckCircle2 size={16} /> Aprovar & Liberar
                         </button>
-                      </td>
-                    </tr>
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: '10px', justifyContent: 'center' }}
+                          onClick={() => handleTenantAction(tenant.id, 'REJECT')}
+                          title="Recusar cadastro"
+                        >
+                          <XCircle size={16} /> Recusar
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* TAB 3: LAVA-RÁPIDOS & MENSALIDADES */}
+          {activeTab === 'tenants' && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Lava-Rápidos & Controle de Mensalidades</h3>
+                
+                {/* Search Bar */}
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Buscar por lava-rápido..."
+                    value={searchTenant}
+                    onChange={(e) => setSearchTenant(e.target.value)}
+                    style={{ paddingLeft: '36px' }}
+                  />
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                </div>
+              </div>
+
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Lava-Rápido</th>
+                      <th>Contato</th>
+                      <th style={{ textAlign: 'right' }}>Vendas (Mês)</th>
+                      <th style={{ textAlign: 'right' }}>Vendas (Total)</th>
+                      <th>Status Cadastro</th>
+                      <th>Mensalidade</th>
+                      <th>Acesso</th>
+                      <th style={{ textAlign: 'right' }}>Ações de Controle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTenants.map((tenant) => (
+                      <tr key={tenant.id}>
+                        <td>
+                          <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{tenant.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>slug: {tenant.slug}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{tenant.ownerName}</div>
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>{tenant.email}</div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-400)' }}>
+                          {formatCurrency(tenant.revenueMonth)}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                          {formatCurrency(tenant.revenueTotal)}
+                        </td>
+                        <td>
+                          {tenant.status === 'APPROVED' && <span className="badge badge-success">Aprovado</span>}
+                          {tenant.status === 'PENDING' && <span className="badge badge-warning">Pendente</span>}
+                          {tenant.status === 'REJECTED' && <span className="badge badge-danger">Recusado</span>}
+                        </td>
+                        <td>
+                          <select
+                            value={tenant.paymentStatus}
+                            onChange={(e) =>
+                              handleTenantAction(tenant.id, 'SET_PAYMENT_STATUS', {
+                                paymentStatus: e.target.value,
+                              })
+                            }
+                            style={{
+                              background: '#0d1220',
+                              color: tenant.paymentStatus === 'PAID' ? '#22c55e' : tenant.paymentStatus === 'OVERDUE' ? '#ef4444' : '#eab308',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              borderRadius: '8px',
+                              padding: '6px 10px',
+                              fontWeight: 700,
+                              fontSize: '0.8125rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="PAID">🟢 Pago (Em dia)</option>
+                            <option value="PENDING">🟡 Pendente</option>
+                            <option value="OVERDUE">🔴 Em Atraso (Bloquear)</option>
+                          </select>
+                        </td>
+                        <td>
+                          {tenant.active ? (
+                            <span className="badge badge-success">Liberado</span>
+                          ) : (
+                            <span className="badge badge-danger">Bloqueado</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            className={`btn btn-sm ${tenant.active ? 'btn-danger' : 'btn-secondary'}`}
+                            onClick={() => handleTenantAction(tenant.id, 'TOGGLE_ACTIVE', { active: !tenant.active })}
+                          >
+                            <Power size={14} />
+                            {tenant.active ? 'Bloquear Acesso' : 'Liberar Acesso'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: TODOS OS CLIENTES FINAIS DA PLATAFORMA */}
+          {activeTab === 'customers' && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Clientes Cadastrados na Plataforma</h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Visão de todos os clientes cadastrados pelos lava-rápidos parceiros</p>
+                </div>
+                
+                {/* Search Bar */}
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Buscar cliente, telefone ou lava-rápido..."
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
+                    style={{ paddingLeft: '36px' }}
+                  />
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                </div>
+              </div>
+
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Telefone / WhatsApp</th>
+                      <th>Lava-Rápido Pertencente</th>
+                      <th style={{ textAlign: 'right' }}>Total de Visitas</th>
+                      <th style={{ textAlign: 'right' }}>Total Gasto em Lavagens</th>
+                      <th>Cadastrado Em</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>
+                          Nenhum cliente encontrado.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustomers.map((cust) => (
+                        <tr key={cust.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{cust.name}</div>
+                          </td>
+                          <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{cust.phone}</td>
+                          <td>
+                            <span className="badge badge-info" style={{ fontWeight: 600 }}>
+                              {cust.tenantName}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 700 }}>{cust.totalVisits}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: '#22c55e' }}>
+                            {formatCurrency(cust.totalSpent)}
+                          </td>
+                          <td>{formatDate(cust.createdAt)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -78,6 +78,8 @@ async function main() {
   ];
 
   const servicesTemplate = [
+    { name: 'Lavagem Carro Pequeno', description: 'Lavagem completa para carros de pequeno porte (hatch/sedã compacto).', price: 50.0 },
+    { name: 'Lavagem Carro Grande', description: 'Lavagem completa para carros de grande porte (SUVs/Pickups).', price: 90.0 },
     { name: 'Lavagem Simples', description: 'Lavagem externa com shampoo neutro.', price: 40.0 },
     { name: 'Lavagem Completa', description: 'Lavagem externa + limpeza interna.', price: 80.0 },
     { name: 'Lavagem Premium', description: 'Completa + cera líquida + acabamento vip.', price: 120.0 },
@@ -101,6 +103,9 @@ async function main() {
         email: tConfig.email,
         phone: tConfig.phone,
         active: true,
+        status: 'APPROVED',
+        paymentStatus: 'PAID',
+        monthlyFee: 99.0,
       },
     });
 
@@ -233,6 +238,30 @@ async function main() {
 
     console.log(`   ✅ Created ${tConfig.name} with ${tenantWashCount} washes.`);
   }
+
+  // Create Demo Pending Tenant (Awaiting Approval)
+  const pendingTenant = await prisma.tenant.create({
+    data: {
+      name: 'Lava Rápido Novo Visual (Aguardando Aprovação)',
+      slug: 'lava-rapido-novo-visual',
+      email: 'novovisual@lavarapido.com',
+      phone: '+5511955550009',
+      active: false,
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      monthlyFee: 99.0,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      tenantId: pendingTenant.id,
+      name: 'Carlos Novo Visual',
+      email: 'novovisual@lavarapido.com',
+      password: hashPassword('Seed@2026'),
+      role: 'TENANT_ADMIN',
+    },
+  });
 
   console.log('\n🎉 Multi-Tenant Seed Complete!');
   console.log('--------------------------------------------------');

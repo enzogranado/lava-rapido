@@ -15,7 +15,11 @@ model Tenant {
   slug                    String   @unique
   phone                   String?
   email                   String?
-  active                  Boolean  @default(true)
+  active                  Boolean  @default(false)
+  status                  String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  paymentStatus           String   @default("PENDING") // PAID, PENDING, OVERDUE
+  monthlyFee              Float    @default(99.00)
+  lastPaymentDate         DateTime?
   inactiveDaysLimit       Int      @default(45)
   whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
   createdAt               DateTime @default(now())

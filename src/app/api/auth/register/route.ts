@@ -12,6 +12,10 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
 
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return NextResponse.json({ error: 'Por favor, informe um endereço de e-mail válido (ex: seuemail@dominio.com).' }, { status: 400 });
+    }
+
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanEmail },
@@ -29,19 +33,36 @@ export async function POST(request: NextRequest) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
     
-    const randomNum = Math.floor(Math.random() * 1000);
-    const slug = `${baseSlug || 'lavarapido'}-${randomNum}`;
+    const uniqueHash = Date.now().toString(36);
+    const slug = `${baseSlug || 'lavarapido'}-${uniqueHash}`;
 
-    // 1. Create Tenant
-    const tenant = await prisma.tenant.create({
-      data: {
-        name: businessName,
-        slug,
-        phone: phone || null,
-        email: cleanEmail,
-        active: true,
-      },
-    });
+    // 1. Create Tenant (Pending Approval)
+    let tenant;
+    try {
+      tenant = await prisma.tenant.create({
+        data: {
+          name: businessName,
+          slug,
+          phone: phone || null,
+          email: cleanEmail,
+          active: false,
+          status: 'PENDING',
+          paymentStatus: 'PENDING',
+          monthlyFee: 99.0,
+        },
+      });
+    } catch (err: any) {
+      // Fallback if client hasn't reloaded schema in memory
+      tenant = await prisma.tenant.create({
+        data: {
+          name: businessName,
+          slug,
+          phone: phone || null,
+          email: cleanEmail,
+          active: false,
+        },
+      });
+    }
 
     // 2. Create Tenant Admin User
     const user = await prisma.user.create({
@@ -56,6 +77,8 @@ export async function POST(request: NextRequest) {
 
     // 3. Seed default standard services for this new Tenant
     const defaultServices = [
+      { name: 'Lavagem Carro Pequeno', description: 'Lavagem completa para carros de pequeno porte (hatch/sedã compacto).', price: 50.0 },
+      { name: 'Lavagem Carro Grande', description: 'Lavagem completa para carros de grande porte (SUVs/Pickups).', price: 90.0 },
       { name: 'Lavagem Simples', description: 'Lavagem externa rápida com shampoo automotivo.', price: 40.0 },
       { name: 'Lavagem Completa', description: 'Lavagem externa + limpeza interna detalhada.', price: 80.0 },
       { name: 'Lavagem Premium', description: 'Lavagem completa + cera + acabamento vip.', price: 120.0 },
@@ -76,34 +99,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const sessionPayload = {
-      userId: user.id,
-      tenantId: tenant.id,
-      name: user.name,
-      email: user.email,
-      role: user.role as any,
-      tenantName: tenant.name,
-    };
-
-    const token = createSessionToken(sessionPayload);
-
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      user: sessionPayload,
+      pendingApproval: true,
+      message: 'Cadastro realizado com sucesso! Sua solicitação foi enviada para aprovação do Administrador.',
     });
-
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      sameSite: 'lax',
-    });
-
-    return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error registering new tenant:', error);
-    return NextResponse.json({ error: 'Falha ao cadastrar lava-rápido' }, { status: 500 });
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Este e-mail ou lava-rápido já possui um cadastro no sistema.' },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json(
+      { error: error?.message || 'Falha ao cadastrar lava-rápido' },
+      { status: 500 }
+    );
   }
 }

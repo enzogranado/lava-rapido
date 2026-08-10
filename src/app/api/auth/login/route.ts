@@ -25,8 +25,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 401 });
     }
 
-    if (user.tenant && !user.tenant.active) {
-      return NextResponse.json({ error: 'Este lava-rápido está inativo na plataforma.' }, { status: 403 });
+    if (user.tenant) {
+      if (user.tenant.status === 'PENDING') {
+        return NextResponse.json(
+          { error: 'Seu cadastro está em análise pela equipe administradora. Aguarde a aprovação.' },
+          { status: 403 }
+        );
+      }
+
+      if (user.tenant.status === 'REJECTED') {
+        return NextResponse.json(
+          { error: 'Seu cadastro foi recusado pela administração. Entre em contato com o suporte.' },
+          { status: 403 }
+        );
+      }
+
+      if (!user.tenant.active || user.tenant.paymentStatus === 'OVERDUE') {
+        return NextResponse.json(
+          { error: 'Acesso suspenso por pendência financeira ou bloqueio administrativo. Fale com a administração.' },
+          { status: 403 }
+        );
+      }
     }
 
     const sessionPayload = {

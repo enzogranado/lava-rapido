@@ -92,36 +92,37 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
-          {session?.role === 'SUPER_ADMIN' && (
+          {session?.role === 'SUPER_ADMIN' ? (
             <div>
-              <div className="sidebar-section-label" style={{ color: '#a855f7' }}>Plataforma Admin</div>
+              <div className="sidebar-section-label" style={{ color: '#a855f7' }}>Gestão da Plataforma</div>
+              
               <Link
                 href="/admin"
-                className={`sidebar-link ${isActive('/admin') ? 'active' : ''}`}
+                className={`sidebar-link ${pathname === '/admin' ? 'active' : ''}`}
                 onClick={onClose}
                 style={{ color: '#c084fc' }}
               >
                 <ShieldCheck className="sidebar-link-icon" size={20} color="#a855f7" />
-                Painel Admin
+                Painel Master
               </Link>
             </div>
+          ) : (
+            navItems.map((item) => (
+              <div key={item.href}>
+                {item.section && (
+                  <div className="sidebar-section-label">{item.section}</div>
+                )}
+                <Link
+                  href={item.href}
+                  className={`sidebar-link ${isActive(item.href) ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <item.icon className="sidebar-link-icon" size={20} />
+                  {item.label}
+                </Link>
+              </div>
+            ))
           )}
-
-          {navItems.map((item) => (
-            <div key={item.href}>
-              {item.section && (
-                <div className="sidebar-section-label">{item.section}</div>
-              )}
-              <Link
-                href={item.href}
-                className={`sidebar-link ${isActive(item.href) ? 'active' : ''}`}
-                onClick={onClose}
-              >
-                <item.icon className="sidebar-link-icon" size={20} />
-                {item.label}
-              </Link>
-            </div>
-          ))}
         </nav>
 
         {/* Footer with Logout */}

@@ -1,4 +1,4 @@
-// Prisma schema for Sistema Lava Rápido
+// Prisma schema for Sistema Lava Rápido (Multi-Tenant Architecture)
 // Database: SQLite (can be migrated to PostgreSQL later)
 
 generator client {
@@ -6,44 +6,89 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+}
+
+model Tenant {
+  id                      String   @id @default(cuid())
+  name                    String
+  slug                    String   @unique
+  phone                   String?
+  email                   String?
+  active                  Boolean  @default(true)
+  inactiveDaysLimit       Int      @default(45)
+  whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  users            User[]
+  customers        Customer[]
+  vehicles         Vehicle[]
+  services         Service[]
+  washes           Wash[]
+  whatsappMessages WhatsAppMessage[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String?  @default("tenant-default")
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("TENANT_ADMIN") // "SUPER_ADMIN", "TENANT_ADMIN"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([email])
 }
 
 model Customer {
   id        String   @id @default(cuid())
+  tenantId  String   @default("tenant-default")
   name      String
-  phone     String   @unique
+  phone     String
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicles         Vehicle[]
   washes           Wash[]
   whatsappMessages WhatsAppMessage[]
 
+  @@unique([tenantId, phone])
+  @@index([tenantId])
   @@index([name])
   @@index([phone])
 }
 
 model Vehicle {
   id         String   @id @default(cuid())
+  tenantId   String   @default("tenant-default")
   customerId String
   model      String
-  plate      String   @unique
+  plate      String
   color      String?
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   washes   Wash[]
 
+  @@unique([tenantId, plate])
+  @@index([tenantId])
   @@index([plate])
   @@index([customerId])
 }
 
 model Service {
   id          String   @id @default(cuid())
+  tenantId    String   @default("tenant-default")
   name        String
   description String?
   price       Float
@@ -51,13 +96,16 @@ model Service {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   washItems WashItem[]
 
+  @@index([tenantId])
   @@index([active])
 }
 
 model Wash {
   id          String    @id @default(cuid())
+  tenantId    String    @default("tenant-default")
   customerId  String
   vehicleId   String
   status      String    @default("WAITING") // WAITING, IN_SERVICE, FINISHING, READY, DELIVERED, CANCELLED
@@ -71,11 +119,13 @@ model Wash {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer         Customer          @relation(fields: [customerId], references: [id])
   vehicle          Vehicle           @relation(fields: [vehicleId], references: [id])
   items            WashItem[]
   whatsappMessages WhatsAppMessage[]
 
+  @@index([tenantId])
   @@index([customerId])
   @@index([vehicleId])
   @@index([status])
@@ -100,6 +150,7 @@ model WashItem {
 
 model WhatsAppMessage {
   id                String    @id @default(cuid())
+  tenantId          String    @default("tenant-default")
   customerId        String
   washId            String?
   phone             String
@@ -111,19 +162,21 @@ model WhatsAppMessage {
   deliveredAt       DateTime?
   createdAt         DateTime  @default(now())
 
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id])
   wash     Wash?    @relation(fields: [washId], references: [id])
 
+  @@index([tenantId])
   @@index([customerId])
   @@index([washId])
   @@index([status])
 }
 
 model Settings {
-  id                   String @id @default("default")
-  businessName         String @default("Meu Lava Rápido")
-  inactiveDaysLimit    Int    @default(45)
-  whatsappMessageTemplate String @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                      String   @id @default("default")
+  businessName            String   @default("Meu Lava Rápido")
+  inactiveDaysLimit       Int      @default(45)
+  whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }

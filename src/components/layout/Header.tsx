@@ -1,7 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { Menu, Plus } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, Plus, LogOut, Store, ShieldCheck, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HeaderProps {
@@ -19,11 +19,14 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/relatorios': { title: 'Relatórios', subtitle: 'Análises e métricas do negócio' },
   '/whatsapp': { title: 'WhatsApp', subtitle: 'Histórico de mensagens enviadas' },
   '/configuracoes': { title: 'Configurações', subtitle: 'Configurações do sistema' },
+  '/admin': { title: 'Painel Administrador', subtitle: 'Gestão global de lava-rápidos da plataforma' },
 };
 
 export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState('');
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     const updateDate = () => {
@@ -41,7 +44,25 @@ export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Find matching page title (handle dynamic routes)
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) setSession(data.user);
+      })
+      .catch(() => {});
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const basePath = '/' + (pathname.split('/')[1] || '');
   const pageInfo = pageTitles[basePath] || pageTitles[pathname] || { title: 'Página', subtitle: '' };
 
@@ -56,12 +77,38 @@ export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
           <p className="header-subtitle">{pageInfo.subtitle}</p>
         </div>
       </div>
-      <div className="header-right">
+
+      <div className="header-right" style={{ gap: '16px' }}>
+        {session && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {session.role === 'SUPER_ADMIN' ? (
+              <ShieldCheck size={16} color="#a855f7" />
+            ) : (
+              <Store size={16} color="var(--color-primary-400)" />
+            )}
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {session.tenantName || session.name}
+            </span>
+          </div>
+        )}
+
         <span className="header-date" style={{ textTransform: 'capitalize' }}>{currentDate}</span>
-        {onNewWash && (
+        
+        {onNewWash && pathname !== '/admin' && (
           <button className="btn btn-primary" onClick={onNewWash} id="header-new-wash-btn">
             <Plus size={18} />
             Novo Atendimento
+          </button>
+        )}
+
+        {session && (
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleLogout}
+            title="Sair da conta"
+            style={{ color: 'var(--text-tertiary)', padding: '8px' }}
+          >
+            <LogOut size={16} />
           </button>
         )}
       </div>

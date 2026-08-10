@@ -341,7 +341,7 @@ export default function DashboardPage() {
                     borderWidth: 1,
                     callbacks: {
                       label: (context) => {
-                        const val = context.parsed.y;
+                        const val = context.parsed.y ?? 0;
                         if (chartMetric === 'revenue') {
                           return ` Receita: ${formatCurrency(val)}`;
                         }

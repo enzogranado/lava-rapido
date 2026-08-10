@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/dashboard/stats — Comprehensive stats for Dashboard
-export async function GET() {
+// GET /api/dashboard/stats — Comprehensive stats for Dashboard scoped to current Tenant
+export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const now = new Date();
     
     // Start of today
@@ -19,17 +21,18 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Settings for inactive threshold
-    const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
-    const inactiveLimitDays = settings?.inactiveDaysLimit || 45;
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const inactiveLimitDays = tenant?.inactiveDaysLimit || 45;
     const inactiveThreshold = new Date(now.getTime() - inactiveLimitDays * 24 * 60 * 60 * 1000);
 
     // 1. Total counts
-    const totalCustomers = await prisma.customer.count();
-    const totalVehicles = await prisma.vehicle.count();
+    const totalCustomers = await prisma.customer.count({ where: { tenantId } });
+    const totalVehicles = await prisma.vehicle.count({ where: { tenantId } });
 
     // 2. Washes today
     const washesToday = await prisma.wash.count({
       where: {
+        tenantId,
         createdAt: { gte: startOfToday },
         status: { not: 'CANCELLED' },
       },
@@ -38,6 +41,7 @@ export async function GET() {
     // 3. Washes this month (período)
     const washesMonth = await prisma.wash.count({
       where: {
+        tenantId,
         createdAt: { gte: startOfMonth },
         status: { not: 'CANCELLED' },
       },
@@ -47,6 +51,7 @@ export async function GET() {
     const customersTodayRaw = await prisma.wash.groupBy({
       by: ['customerId'],
       where: {
+        tenantId,
         createdAt: { gte: startOfToday },
         status: { not: 'CANCELLED' },
       },
@@ -54,10 +59,9 @@ export async function GET() {
     const customersToday = customersTodayRaw.length;
 
     // 5. Recurrent vs Inactive customers
-    // Recurrent: 3+ non-cancelled washes
     const washesPerCustomer = await prisma.wash.groupBy({
       by: ['customerId'],
-      where: { status: { not: 'CANCELLED' } },
+      where: { tenantId, status: { not: 'CANCELLED' } },
       _count: { _all: true },
     });
 
@@ -68,9 +72,10 @@ export async function GET() {
 
     // Inactive: last visit before inactiveThreshold
     const allCustomers = await prisma.customer.findMany({
+      where: { tenantId },
       include: {
         washes: {
-          where: { status: { not: 'CANCELLED' } },
+          where: { tenantId, status: { not: 'CANCELLED' } },
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -79,7 +84,7 @@ export async function GET() {
 
     const inactiveCustomersList = allCustomers
       .filter((c) => {
-        if (c.washes.length === 0) return true; // never visited or no completed wash
+        if (c.washes.length === 0) return true;
         const lastVisit = c.washes[0].createdAt;
         return lastVisit < inactiveThreshold;
       })
@@ -100,19 +105,20 @@ export async function GET() {
 
     const inactiveCustomersCount = inactiveCustomersList.length;
 
-    // 6. Revenue calculations (only delivered washes count as revenue)
+    // 6. Revenue calculations
     const revenueTodayAgg = await prisma.wash.aggregate({
       where: {
+        tenantId,
         status: 'DELIVERED',
         deliveredAt: { gte: startOfToday },
       },
       _sum: { total: true },
-      _count: { _all: true },
     });
     const revenueToday = revenueTodayAgg._sum.total || 0;
 
     const revenueWeekAgg = await prisma.wash.aggregate({
       where: {
+        tenantId,
         status: 'DELIVERED',
         deliveredAt: { gte: startOfWeek },
       },
@@ -122,6 +128,7 @@ export async function GET() {
 
     const revenueMonthAgg = await prisma.wash.aggregate({
       where: {
+        tenantId,
         status: 'DELIVERED',
         createdAt: { gte: startOfMonth },
       },
@@ -132,10 +139,10 @@ export async function GET() {
     const countMonthWashes = revenueMonthAgg._count._all || 0;
     const ticketMedioMonth = countMonthWashes > 0 ? revenueMonth / countMonthWashes : 0;
 
-    // Average visits per customer per month
     const avgVisitsPerCustomer = totalCustomers > 0 ? (washesMonth / totalCustomers).toFixed(1) : '0.0';
 
     return NextResponse.json({
+      tenantName: tenant?.name || 'Lava Rápido',
       totalCustomers,
       totalVehicles,
       washesToday,
@@ -149,10 +156,11 @@ export async function GET() {
       countMonthWashes,
       ticketMedioMonth,
       avgVisitsPerCustomer,
-      inactiveCustomersList: inactiveCustomersList.slice(0, 10), // top 10 needing attention
+      inactiveCustomersList: inactiveCustomersList.slice(0, 10),
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json({ error: 'Failed to fetch dashboard stats' }, { status: 500 });
   }
 }
+

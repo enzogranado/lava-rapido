@@ -1,214 +1,252 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
+import { PrismaPg } from '@prisma/adapter-pg';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
 
-const adapter = new PrismaBetterSqlite3({
-  url: 'file:' + path.join(process.cwd(), 'dev.db'),
-});
+dotenv.config();
+
+const connectionString = process.env.DATABASE_URL;
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+function hashPassword(password: string): string {
+  const salt = 'lava_rapido_secure_salt_2026';
+  return crypto.createHmac('sha256', salt).update(password).digest('hex');
+}
+
 async function main() {
-  console.log('🌱 Seeding database with realistic continuous history...');
+  console.log('🌱 Seeding database with Multi-Tenant accounts and realistic history...');
+
+  // Clean existing tables
+  await prisma.washItem.deleteMany();
+  await prisma.wash.deleteMany();
+  await prisma.whatsAppMessage.deleteMany();
+  await prisma.vehicle.deleteMany();
+  await prisma.customer.deleteMany();
+  await prisma.service.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.tenant.deleteMany();
+  await prisma.settings.deleteMany();
 
   // 1. Settings
-  await prisma.settings.upsert({
-    where: { id: 'default' },
-    update: {},
-    create: {
+  await prisma.settings.create({
+    data: {
       id: 'default',
       businessName: 'Meu Lava Rápido',
       inactiveDaysLimit: 45,
     },
   });
 
-  // 2. Services
-  const servicesData = [
-    { name: 'Lavagem Simples', description: 'Lavagem externa com água e shampoo automotivo.', price: 40.0 },
-    { name: 'Lavagem Completa', description: 'Lavagem externa + limpeza interna + acabamento.', price: 80.0 },
-    { name: 'Lavagem Premium', description: 'Lavagem completa + cera + perfumaria + detalhamento.', price: 120.0 },
-    { name: 'Higienização Interna', description: 'Limpeza profunda do interior do veículo.', price: 120.0 },
-    { name: 'Higienização de Bancos', description: 'Limpeza profunda dos bancos com extratora.', price: 150.0 },
-    { name: 'Enceramento', description: 'Aplicação de cera protetora para brilho da pintura.', price: 30.0 },
-    { name: 'Polimento', description: 'Polimento técnico para remoção de riscos.', price: 200.0 },
-    { name: 'Lavagem de Motor', description: 'Limpeza e desengorduramento do motor.', price: 60.0 },
-    { name: 'Limpeza de Ar-condicionado', description: 'Higienização do sistema de ar-condicionado.', price: 80.0 },
-    { name: 'Cristalização', description: 'Cristalização da pintura para proteção duradoura.', price: 250.0 },
+  // 2. Create Super Admin User
+  await prisma.user.create({
+    data: {
+      id: 'super-admin-1',
+      tenantId: null,
+      name: 'Super Administrador',
+      email: 'admin@sistema.com',
+      password: hashPassword('admin123'),
+      role: 'SUPER_ADMIN',
+    },
+  });
+
+  // 3. Create 3 Distinct Tenants (Lava Rápidos)
+  const tenantsConfig = [
+    {
+      name: 'Lava Rápido Express',
+      slug: 'lava-rapido-express',
+      email: 'express@lavarapido.com',
+      ownerName: 'Ricardo Express',
+      phone: '+5511988880001',
+      days: 60,
+    },
+    {
+      name: 'Auto Spa Premium',
+      slug: 'auto-spa-premium',
+      email: 'premium@lavarapido.com',
+      ownerName: 'Juliana Premium',
+      phone: '+5511977770002',
+      days: 60,
+    },
+    {
+      name: 'Lava Jato Central',
+      slug: 'lava-jato-central',
+      email: 'central@lavarapido.com',
+      ownerName: 'Marcos Central',
+      phone: '+5511966660003',
+      days: 45,
+    },
   ];
 
-  for (const s of servicesData) {
-    await prisma.service.upsert({
-      where: { id: s.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') },
-      update: { price: s.price, description: s.description },
-      create: {
-        id: s.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        ...s,
-      },
-    });
-  }
-
-  const allServices = await prisma.service.findMany();
-
-  // 3. Customers
-  const customerList = [
-    { name: 'João Silva', phone: '+5511999990001', notes: 'Cliente VIP' },
-    { name: 'Maria Oliveira', phone: '+5511999990002', notes: 'Gosta de lavagem completa' },
-    { name: 'Pedro Santos', phone: '+5511999990003', notes: 'Prefere higienização' },
-    { name: 'Ana Costa', phone: '+5511999990004', notes: '' },
-    { name: 'Carlos Ferreira', phone: '+5511999990005', notes: 'Cliente frequente' },
-    { name: 'Fernanda Lima', phone: '+5511999990006', notes: '' },
-    { name: 'Lucas Mendes', phone: '+5511999990007', notes: 'Cliente corporativo' },
-    { name: 'Beatriz Rocha', phone: '+5511999990008', notes: '' },
-    { name: 'Gabriel Almeida', phone: '+5511999990009', notes: 'Vem quase todo fim de semana' },
-    { name: 'Camila Souza', phone: '+5511999990010', notes: '' },
-    { name: 'Rodrigo Barbosa', phone: '+5511999990011', notes: '' },
-    { name: 'Juliana Martins', phone: '+5511999990012', notes: '' },
-    { name: 'Marcelo Dias', phone: '+5511999990013', notes: 'Cliente inativo' },
-    { name: 'Patricia Ribeiro', phone: '+5511999990014', notes: 'Cliente inativo' },
+  const servicesTemplate = [
+    { name: 'Lavagem Simples', description: 'Lavagem externa com shampoo neutro.', price: 40.0 },
+    { name: 'Lavagem Completa', description: 'Lavagem externa + limpeza interna.', price: 80.0 },
+    { name: 'Lavagem Premium', description: 'Completa + cera líquida + acabamento vip.', price: 120.0 },
+    { name: 'Higienização Interna', description: 'Higienização e aspiração profunda.', price: 130.0 },
+    { name: 'Enceramento', description: 'Aplicação de cera protetora.', price: 35.0 },
+    { name: 'Polimento Técnico', description: 'Polimento para risco e brilho.', price: 220.0 },
   ];
 
-  const dbCustomers = [];
-  for (const c of customerList) {
-    const cust = await prisma.customer.upsert({
-      where: { phone: c.phone },
-      update: { name: c.name, notes: c.notes },
-      create: c,
-    });
-    dbCustomers.push(cust);
-  }
-
-  // 4. Vehicles
-  const vehicleList = [
-    { customerIndex: 0, model: 'Honda HR-V', plate: 'ABC1D23', color: 'Branco' },
-    { customerIndex: 0, model: 'Toyota Corolla', plate: 'XYZ4E56', color: 'Prata' },
-    { customerIndex: 1, model: 'Hyundai HB20', plate: 'DEF7G89', color: 'Preto' },
-    { customerIndex: 2, model: 'Volkswagen T-Cross', plate: 'GHI0J12', color: 'Vermelho' },
-    { customerIndex: 2, model: 'Fiat Pulse', plate: 'KLM3N45', color: 'Azul' },
-    { customerIndex: 3, model: 'Chevrolet Onix', plate: 'OPQ6R78', color: 'Cinza' },
-    { customerIndex: 4, model: 'Jeep Renegade', plate: 'STU9V01', color: 'Verde' },
-    { customerIndex: 5, model: 'Honda Civic', plate: 'VWX2Y34', color: 'Preto' },
-    { customerIndex: 6, model: 'Toyota Hilux', plate: 'ZAB5C67', color: 'Branco' },
-    { customerIndex: 7, model: 'Jeep Compass', plate: 'DEF8G90', color: 'Prata' },
-    { customerIndex: 8, model: 'Volkswagen Polo', plate: 'HIJ1K23', color: 'Cinza' },
-    { customerIndex: 9, model: 'Chevrolet Tracker', plate: 'LMN4O56', color: 'Azul' },
-    { customerIndex: 10, model: 'Nissan Kicks', plate: 'PQR7S89', color: 'Laranja' },
-    { customerIndex: 11, model: 'Fiat Argo', plate: 'TUV0W12', color: 'Branco' },
-    { customerIndex: 12, model: 'Renault Duster', plate: 'XYZ3A45', color: 'Marrom' },
-    { customerIndex: 13, model: 'Peugeot 208', plate: 'BCD6E78', color: 'Azul' },
-  ];
-
-  const dbVehicles = [];
-  for (const v of vehicleList) {
-    const cust = dbCustomers[v.customerIndex];
-    const veh = await prisma.vehicle.upsert({
-      where: { plate: v.plate },
-      update: { model: v.model, color: v.color },
-      create: {
-        customerId: cust.id,
-        model: v.model,
-        plate: v.plate,
-        color: v.color,
-      },
-    });
-    dbVehicles.push(veh);
-  }
-
-  // Clear existing washes & washItems to re-seed cleanly
-  await prisma.washItem.deleteMany();
-  await prisma.wash.deleteMany();
-
+  const now = new Date();
   const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
   const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-  const now = new Date();
+  for (const tConfig of tenantsConfig) {
+    console.log(`\n🏢 Creating Tenant: ${tConfig.name}...`);
+    
+    // Create Tenant
+    const tenant = await prisma.tenant.create({
+      data: {
+        name: tConfig.name,
+        slug: tConfig.slug,
+        email: tConfig.email,
+        phone: tConfig.phone,
+        active: true,
+      },
+    });
 
-  console.log('⏳ Generating 120 days of washes history...');
+    // Create Tenant Owner User
+    await prisma.user.create({
+      data: {
+        tenantId: tenant.id,
+        name: tConfig.ownerName,
+        email: tConfig.email,
+        password: hashPassword('user123'),
+        role: 'TENANT_ADMIN',
+      },
+    });
 
-  for (let dayOffset = 120; dayOffset >= 0; dayOffset--) {
-    const targetDate = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000);
-    const dayOfWeek = targetDate.getDay();
-
-    let dailyWashCount = dayOfWeek === 0 || dayOfWeek === 6 ? getRandomInt(4, 8) : getRandomInt(2, 5);
-
-    if (dayOffset === 0) {
-      dailyWashCount = 4;
-    }
-
-    for (let i = 0; i < dailyWashCount; i++) {
-      const maxVehIndex = dayOffset < 50 ? 11 : dbVehicles.length - 1;
-      const vehicle = dbVehicles[getRandomInt(0, maxVehIndex)];
-      const customerId = vehicle.customerId;
-
-      let status = 'DELIVERED';
-      if (dayOffset === 0) {
-        const statuses = ['DELIVERED', 'DELIVERED', 'READY', 'IN_SERVICE', 'WAITING'];
-        status = statuses[i % statuses.length];
-      } else {
-        const randVal = Math.random();
-        if (randVal < 0.92) status = 'DELIVERED';
-        else if (randVal < 0.97) status = 'DELIVERED';
-        else status = 'CANCELLED';
-      }
-
-      const primarySvc = getRandom(allServices);
-      const chosenServices = [primarySvc];
-      if (Math.random() > 0.6) {
-        const secSvc = getRandom(allServices.filter((s) => s.id !== primarySvc.id));
-        chosenServices.push(secSvc);
-      }
-
-      const items = chosenServices.map((svc) => ({
-        serviceId: svc.id,
-        serviceNameSnapshot: svc.name,
-        unitPrice: svc.price,
-        quantity: 1,
-        total: svc.price,
-      }));
-
-      const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const discount = Math.random() > 0.8 ? 10 : 0;
-      const total = Math.max(0, subtotal - discount);
-
-      const hour = 8 + Math.floor((i * 9) / dailyWashCount) + getRandomInt(0, 1);
-      const minute = getRandomInt(0, 59);
-      const createdAt = new Date(targetDate);
-      createdAt.setHours(hour, minute, 0, 0);
-
-      const startedAt = new Date(createdAt.getTime() + 10 * 60 * 1000);
-      const completedAt = status === 'DELIVERED' || status === 'READY'
-        ? new Date(createdAt.getTime() + (45 + getRandomInt(10, 40)) * 60 * 1000)
-        : undefined;
-      const deliveredAt = status === 'DELIVERED'
-        ? new Date(createdAt.getTime() + (60 + getRandomInt(15, 60)) * 60 * 1000)
-        : undefined;
-
-      await prisma.wash.create({
+    // Create Services
+    const tenantServices = [];
+    for (const st of servicesTemplate) {
+      const priceMultiplier = tConfig.slug.includes('premium') ? 1.3 : 1.0;
+      const s = await prisma.service.create({
         data: {
-          customerId,
-          vehicleId: vehicle.id,
-          status,
-          subtotal,
-          discount,
-          total,
-          createdAt,
-          startedAt,
-          completedAt,
-          deliveredAt,
-          items: {
-            create: items,
-          },
+          tenantId: tenant.id,
+          name: st.name,
+          description: st.description,
+          price: Math.round(st.price * priceMultiplier),
+          active: true,
         },
       });
+      tenantServices.push(s);
     }
+
+    // Create Customers & Vehicles
+    const tenantCustomers = [
+      { name: `João Silva (${tConfig.name.split(' ')[0]})`, phone: `+551199${getRandomInt(1000, 9999)}001` },
+      { name: `Maria Santos (${tConfig.name.split(' ')[0]})`, phone: `+551199${getRandomInt(1000, 9999)}002` },
+      { name: `Pedro Oliveira`, phone: `+551199${getRandomInt(1000, 9999)}003` },
+      { name: `Ana Costa`, phone: `+551199${getRandomInt(1000, 9999)}004` },
+      { name: `Carlos Ferreira`, phone: `+551199${getRandomInt(1000, 9999)}005` },
+      { name: `Fernanda Lima`, phone: `+551199${getRandomInt(1000, 9999)}006` },
+    ];
+
+    const dbVehicles = [];
+    for (let cIdx = 0; cIdx < tenantCustomers.length; cIdx++) {
+      const cData = tenantCustomers[cIdx];
+      const customer = await prisma.customer.create({
+        data: {
+          tenantId: tenant.id,
+          name: cData.name,
+          phone: cData.phone,
+          notes: 'Cliente cadastrado',
+        },
+      });
+
+      const models = ['Honda HR-V', 'Toyota Corolla', 'Hyundai HB20', 'Jeep Compass', 'Chevrolet Onix', 'VW Polo'];
+      const vehicle = await prisma.vehicle.create({
+        data: {
+          tenantId: tenant.id,
+          customerId: customer.id,
+          model: getRandom(models),
+          plate: `${tConfig.slug.substring(0, 2).toUpperCase()}${getRandomInt(100, 999)}${cIdx}`,
+          color: getRandom(['Branco', 'Preto', 'Prata', 'Cinza']),
+        },
+      });
+      dbVehicles.push(vehicle);
+    }
+
+    // Generate washes history sequentially
+    let tenantWashCount = 0;
+
+    for (let dayOffset = tConfig.days; dayOffset >= 0; dayOffset--) {
+      const targetDate = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000);
+      const dayOfWeek = targetDate.getDay();
+
+      const dailyWashCount = dayOfWeek === 0 || dayOfWeek === 6 ? getRandomInt(2, 4) : getRandomInt(1, 3);
+
+      for (let w = 0; w < dailyWashCount; w++) {
+        const vehicle = getRandom(dbVehicles);
+        const primarySvc = getRandom(tenantServices);
+        const chosenServices = [primarySvc];
+
+        if (Math.random() > 0.7) {
+          const secSvc = getRandom(tenantServices.filter((s) => s.id !== primarySvc.id));
+          chosenServices.push(secSvc);
+        }
+
+        const items = chosenServices.map((svc) => ({
+          serviceId: svc.id,
+          serviceNameSnapshot: svc.name,
+          unitPrice: svc.price,
+          quantity: 1,
+          total: svc.price,
+        }));
+
+        const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+        const discount = Math.random() > 0.85 ? 10 : 0;
+        const total = Math.max(0, subtotal - discount);
+
+        let status = 'DELIVERED';
+        if (dayOffset === 0) {
+          const statuses = ['DELIVERED', 'READY', 'IN_SERVICE', 'WAITING'];
+          status = statuses[w % statuses.length];
+        }
+
+        const createdAt = new Date(targetDate.getTime() + (8 + w * 3) * 60 * 60 * 1000);
+        const completedAt = status === 'DELIVERED' || status === 'READY'
+          ? new Date(createdAt.getTime() + 45 * 60 * 1000)
+          : undefined;
+        const deliveredAt = status === 'DELIVERED'
+          ? new Date(createdAt.getTime() + 60 * 60 * 1000)
+          : undefined;
+
+        await prisma.wash.create({
+          data: {
+            tenantId: tenant.id,
+            customerId: vehicle.customerId,
+            vehicleId: vehicle.id,
+            status,
+            subtotal,
+            discount,
+            total,
+            createdAt,
+            startedAt: createdAt,
+            completedAt,
+            deliveredAt,
+            items: { create: items },
+          },
+        });
+        tenantWashCount++;
+      }
+    }
+
+    console.log(`   ✅ Created ${tConfig.name} with ${tenantWashCount} washes.`);
   }
 
-  const washTotalCount = await prisma.wash.count();
-  console.log('✅ Seed completed successfully!');
-  console.log(`📊 Total washes created: ${washTotalCount}`);
+  console.log('\n🎉 Multi-Tenant Seed Complete!');
+  console.log('--------------------------------------------------');
+  console.log('🔑 Credentials to test:');
+  console.log('   - Super Admin:   admin@sistema.com   (pass: admin123)');
+  console.log('   - Express Tenant: express@lavarapido.com (pass: user123)');
+  console.log('   - Premium Tenant: premium@lavarapido.com (pass: user123)');
+  console.log('   - Central Tenant: central@lavarapido.com (pass: user123)');
+  console.log('--------------------------------------------------');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Multi-Tenant Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

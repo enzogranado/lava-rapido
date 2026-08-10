@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Car,
@@ -13,6 +14,7 @@ import {
   Settings,
   X,
   Droplets,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -33,6 +35,16 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) setSession(data.user);
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -53,7 +65,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Droplets size={22} color="white" />
           </div>
           <div>
-            <div className="sidebar-logo-text">Lava Rápido</div>
+            <div className="sidebar-logo-text">{session?.tenantName || 'Lava Rápido'}</div>
             <div className="sidebar-logo-sub">Sistema de Gestão</div>
           </div>
           <button
@@ -68,6 +80,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="sidebar-nav">
+          {session?.role === 'SUPER_ADMIN' && (
+            <div>
+              <div className="sidebar-section-label" style={{ color: '#a855f7' }}>Plataforma Admin</div>
+              <Link
+                href="/admin"
+                className={`sidebar-link ${isActive('/admin') ? 'active' : ''}`}
+                onClick={onClose}
+                style={{ color: '#c084fc' }}
+              >
+                <ShieldCheck className="sidebar-link-icon" size={20} color="#a855f7" />
+                Painel Admin
+              </Link>
+            </div>
+          )}
+
           {navItems.map((item) => (
             <div key={item.href}>
               {item.section && (
@@ -97,9 +124,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             inset: 0;
             background: rgba(0, 0, 0, 0.5);
             z-index: 99;
-          }
-          #sidebar-close-btn {
-            display: flex !important;
           }
         }
       `}</style>

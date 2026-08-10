@@ -106,9 +106,11 @@ export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
             className="btn btn-secondary btn-sm"
             onClick={handleLogout}
             title="Sair da conta"
-            style={{ color: 'var(--text-tertiary)', padding: '8px' }}
+            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.08)', gap: '6px' }}
+            id="header-logout-btn"
           >
             <LogOut size={16} />
+            <span>Sair</span>
           </button>
         )}
       </div>

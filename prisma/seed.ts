@@ -44,7 +44,7 @@ async function main() {
       tenantId: null,
       name: 'Super Administrador',
       email: 'admin@sistema.com',
-      password: hashPassword('admin123'),
+      password: hashPassword('Seed@2026'),
       role: 'SUPER_ADMIN',
     },
   });
@@ -110,7 +110,7 @@ async function main() {
         tenantId: tenant.id,
         name: tConfig.ownerName,
         email: tConfig.email,
-        password: hashPassword('user123'),
+        password: hashPassword('Seed@2026'),
         role: 'TENANT_ADMIN',
       },
     });
@@ -237,10 +237,7 @@ async function main() {
   console.log('\n🎉 Multi-Tenant Seed Complete!');
   console.log('--------------------------------------------------');
   console.log('🔑 Credentials to test:');
-  console.log('   - Super Admin:   admin@sistema.com   (pass: admin123)');
-  console.log('   - Express Tenant: express@lavarapido.com (pass: user123)');
-  console.log('   - Premium Tenant: premium@lavarapido.com (pass: user123)');
-  console.log('   - Central Tenant: central@lavarapido.com (pass: user123)');
+  console.log('   - Super Admin:   admin@sistema.com   (pass: Seed@2026)\n   - Express Tenant: express@lavarapido.com (pass: Seed@2026)\n   - Premium Tenant: premium@lavarapido.com (pass: Seed@2026)\n   - Central Tenant: central@lavarapido.com (pass: Seed@2026)');
   console.log('--------------------------------------------------');
 }
 

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/services — List all services
+// GET /api/services — List all services scoped to tenant
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
 
     const services = await prisma.service.findMany({
-      where: activeOnly ? { active: true } : undefined,
+      where: {
+        tenantId,
+        ...(activeOnly ? { active: true } : {}),
+      },
       orderBy: { name: 'asc' },
     });
 
@@ -19,9 +24,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/services — Create a new service
+// POST /api/services — Create a new service scoped to tenant
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const body = await request.json();
     const { name, description, price, active } = body;
 
@@ -30,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const service = await prisma.service.create({
-      data: { name, description, price: parseFloat(price), active: active !== false },
+      data: { tenantId, name, description, price: parseFloat(price), active: active !== false },
     });
 
     return NextResponse.json(service, { status: 201 });

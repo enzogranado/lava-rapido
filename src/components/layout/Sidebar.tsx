@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   X,
   Droplets,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
@@ -45,6 +47,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
       .catch(() => {});
   }, [pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -58,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="sidebar-overlay" onClick={onClose} />
       )}
 
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
         {/* Logo */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">
@@ -79,7 +91,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
           {session?.role === 'SUPER_ADMIN' && (
             <div>
               <div className="sidebar-section-label" style={{ color: '#a855f7' }}>Plataforma Admin</div>
@@ -111,6 +123,43 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           ))}
         </nav>
+
+        {/* Footer with Logout */}
+        <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
+          {session && (
+            <div style={{ marginBottom: '12px', fontSize: '0.8125rem' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session.name}
+              </div>
+              <div style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session.email}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            id="sidebar-logout-btn"
+          >
+            <LogOut size={16} />
+            Sair da Conta
+          </button>
+        </div>
       </aside>
 
       <style jsx>{`

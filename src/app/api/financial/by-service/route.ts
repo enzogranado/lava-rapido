@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
 // GET /api/financial/by-service — Revenue per service breakdown
 export async function GET(request: NextRequest) {
@@ -16,9 +17,12 @@ export async function GET(request: NextRequest) {
     else if (range === '6m') startDate.setMonth(now.getMonth() - 6);
     else if (range === '1y') startDate.setFullYear(now.getFullYear() - 1);
 
+    const tenantId = await getTenantIdOrFallback(request);
+
     const items = await prisma.washItem.findMany({
       where: {
         wash: {
+          tenantId,
           status: 'DELIVERED',
           createdAt: { gte: startDate },
         },

@@ -73,9 +73,24 @@ export async function getTenantIdOrFallback(request: NextRequest): Promise<strin
     return session.tenantId;
   }
 
-  // Fallback to first available tenant or 'tenant-default'
+  // Fallback to first available tenant or create default tenant
   const firstTenant = await prisma.tenant.findFirst();
-  return firstTenant?.id || 'tenant-default';
+  if (firstTenant) {
+    return firstTenant.id;
+  }
+
+  const defaultTenant = await prisma.tenant.upsert({
+    where: { slug: 'default-tenant' },
+    update: {},
+    create: {
+      id: 'tenant-default',
+      name: 'Meu Lava Rápido',
+      slug: 'default-tenant',
+      active: true,
+    },
+  });
+
+  return defaultTenant.id;
 }
 
 export { COOKIE_NAME };

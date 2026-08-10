@@ -76,6 +76,7 @@ export const whatsappService = {
     // Record in DB
     const log = await prisma.whatsAppMessage.create({
       data: {
+        tenantId: wash.tenantId,
         customerId: customer.id,
         washId: wash.id,
         phone: customer.phone,

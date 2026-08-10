@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/vehicles — List vehicles
+// GET /api/vehicles — List vehicles scoped to tenant
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const customerId = searchParams.get('customerId');
 
     const vehicles = await prisma.vehicle.findMany({
       where: {
+        tenantId,
         ...(customerId ? { customerId } : {}),
         ...(search
           ? {
               OR: [
-                { model: { contains: search } },
-                { plate: { contains: search } },
-                { customer: { name: { contains: search } } },
+                { model: { contains: search, mode: 'insensitive' } },
+                { plate: { contains: search, mode: 'insensitive' } },
+                { customer: { name: { contains: search, mode: 'insensitive' } } },
               ],
             }
           : {}),
@@ -36,9 +39,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/vehicles — Create vehicle
+// POST /api/vehicles — Create vehicle scoped to tenant
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const body = await request.json();
     const { customerId, model, plate, color, notes } = body;
 
@@ -53,6 +57,7 @@ export async function POST(request: NextRequest) {
 
     const vehicle = await prisma.vehicle.create({
       data: {
+        tenantId,
         customerId,
         model,
         plate: formattedPlate,

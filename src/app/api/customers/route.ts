@@ -1,29 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/customers — List all customers with stats and vehicles
+// GET /api/customers — List all customers with stats and vehicles scoped to tenant
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const sortBy = searchParams.get('sortBy') || 'name';
     const sortOrder = searchParams.get('sortOrder') || 'asc';
 
     const customers = await prisma.customer.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { phone: { contains: search } },
-              { vehicles: { some: { plate: { contains: search } } } },
-              { vehicles: { some: { model: { contains: search } } } },
-            ],
-          }
-        : undefined,
+      where: {
+        tenantId,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search, mode: 'insensitive' } },
+                { vehicles: { some: { plate: { contains: search, mode: 'insensitive' }, tenantId } } },
+                { vehicles: { some: { model: { contains: search, mode: 'insensitive' }, tenantId } } },
+              ],
+            }
+          : {}),
+      },
       include: {
-        vehicles: true,
+        vehicles: { where: { tenantId } },
         washes: {
-          where: { status: { not: 'CANCELLED' } },
+          where: { tenantId, status: { not: 'CANCELLED' } },
           include: { items: true },
           orderBy: { createdAt: 'desc' },
         },
@@ -70,9 +75,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/customers — Create a new customer with vehicle in one step
+// POST /api/customers — Create a new customer with vehicle in one step scoped to tenant
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const body = await request.json();
     const { name, phone, notes, vehicleModel, vehiclePlate, vehicleColor } = body;
 
@@ -91,6 +97,7 @@ export async function POST(request: NextRequest) {
     // Create customer with nested vehicle if model & plate provided
     const customer = await prisma.customer.create({
       data: {
+        tenantId,
         name,
         phone: cleanedPhone,
         notes,
@@ -98,6 +105,7 @@ export async function POST(request: NextRequest) {
           ? {
               vehicles: {
                 create: {
+                  tenantId,
                   model: vehicleModel,
                   plate: formattedPlate,
                   color: vehicleColor || null,

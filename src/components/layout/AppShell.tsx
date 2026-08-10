@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileNav from './MobileNav';
@@ -8,6 +9,17 @@ import { ToastProvider } from '../ui/Toast';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isAuthPage = pathname === '/login' || pathname === '/cadastro';
+
+  if (isAuthPage) {
+    return (
+      <ToastProvider>
+        {children}
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>

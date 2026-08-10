@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/washes — List washes with status filtering and relations
+// GET /api/washes — List washes with status filtering and relations scoped to tenant
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const customerId = searchParams.get('customerId');
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
 
     const washes = await prisma.wash.findMany({
       where: {
+        tenantId,
         ...(status ? { status } : {}),
         ...(customerId ? { customerId } : {}),
         ...(dateFilter ? { createdAt: dateFilter } : {}),
@@ -45,9 +48,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/washes — Create new wash / appointment
+// POST /api/washes — Create new wash / appointment scoped to tenant
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
     const body = await request.json();
     const { customerId, vehicleId, items, discount = 0, notes } = body;
 
@@ -63,7 +67,7 @@ export async function POST(request: NextRequest) {
     let subtotal = 0;
 
     for (const item of items) {
-      const service = await prisma.service.findUnique({ where: { id: item.serviceId } });
+      const service = await prisma.service.findFirst({ where: { id: item.serviceId, tenantId } });
       if (!service) continue;
 
       const unitPrice = item.unitPrice !== undefined ? parseFloat(item.unitPrice) : service.price;
@@ -85,6 +89,7 @@ export async function POST(request: NextRequest) {
 
     const wash = await prisma.wash.create({
       data: {
+        tenantId,
         customerId,
         vehicleId,
         status: 'WAITING',

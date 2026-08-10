@@ -108,7 +108,6 @@ export function daysSince(date: Date | string): number {
 export const STATUS_LABELS: Record<string, string> = {
   WAITING: 'Aguardando',
   IN_SERVICE: 'Em Serviço',
-  FINISHING: 'Finalização',
   READY: 'Pronto',
   DELIVERED: 'Entregue',
   CANCELLED: 'Cancelado',
@@ -118,9 +117,8 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_COLORS: Record<string, string> = {
   WAITING: 'var(--color-warning)',
   IN_SERVICE: 'var(--color-info)',
-  FINISHING: 'var(--color-orange)',
-  READY: 'var(--color-purple)',
-  DELIVERED: 'var(--color-success)',
+  READY: 'var(--color-success)',
+  DELIVERED: 'var(--color-purple)',
   CANCELLED: 'var(--color-danger)',
 };
 

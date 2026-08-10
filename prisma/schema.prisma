@@ -112,7 +112,7 @@ model Wash {
   tenantId    String    @default("tenant-default")
   customerId  String
   vehicleId   String
-  status      String    @default("WAITING") // WAITING, IN_SERVICE, FINISHING, READY, DELIVERED, CANCELLED
+  status      String    @default("WAITING") // WAITING, IN_SERVICE, READY, DELIVERED, CANCELLED
   subtotal    Float     @default(0)
   discount    Float     @default(0)
   total       Float     @default(0)

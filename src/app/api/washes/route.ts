@@ -9,29 +9,44 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const customerId = searchParams.get('customerId');
-    const period = searchParams.get('period'); // today, 7d, 30d, etc.
+    const mode = searchParams.get('mode'); // 'today_operational' or null
+    const period = searchParams.get('period'); // today, 7d, 30d, all
 
-    let dateFilter = undefined;
-    const now = new Date();
-    if (period === 'today') {
+    let whereClause: any = { tenantId };
+
+    if (mode === 'today_operational') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      dateFilter = { gte: today };
-    } else if (period === '7d') {
-      const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      dateFilter = { gte: d7 };
-    } else if (period === '30d') {
-      const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      dateFilter = { gte: d30 };
-    }
 
-    const washes = await prisma.wash.findMany({
-      where: {
+      whereClause.OR = [
+        { createdAt: { gte: today } },
+        { status: { in: ['WAITING', 'IN_SERVICE', 'READY'] } },
+      ];
+    } else {
+      let dateFilter = undefined;
+      const now = new Date();
+      if (period === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dateFilter = { gte: today };
+      } else if (period === '7d') {
+        const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        dateFilter = { gte: d7 };
+      } else if (period === '30d') {
+        const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        dateFilter = { gte: d30 };
+      }
+
+      whereClause = {
         tenantId,
         ...(status ? { status } : {}),
         ...(customerId ? { customerId } : {}),
         ...(dateFilter ? { createdAt: dateFilter } : {}),
-      },
+      };
+    }
+
+    const washes = await prisma.wash.findMany({
+      where: whereClause,
       include: {
         customer: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { id: true, model: true, plate: true, color: true } },

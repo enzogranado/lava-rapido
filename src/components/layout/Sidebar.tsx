@@ -16,6 +16,7 @@ import {
   Droplets,
   ShieldCheck,
   LogOut,
+  History,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,7 +26,8 @@ interface SidebarProps {
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { label: 'Atendimentos', href: '/atendimentos', icon: Car, section: 'Operação' },
+  { label: 'Atendimentos (Hoje)', href: '/atendimentos', icon: Car, section: 'Operação' },
+  { label: 'Histórico de Lavagens', href: '/historico', icon: History },
   { label: 'Clientes & Veículos', href: '/clientes', icon: Users },
   { label: 'Serviços', href: '/servicos', icon: Wrench },
   { label: 'Financeiro', href: '/financeiro', icon: DollarSign, section: 'Gestão' },

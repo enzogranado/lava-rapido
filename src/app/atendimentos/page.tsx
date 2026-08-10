@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Plus,
   Car,
@@ -58,9 +59,8 @@ interface Wash {
 const STATUS_STEPS = [
   { id: 'WAITING', label: '1. Aguardando', shortLabel: 'Aguardando', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
   { id: 'IN_SERVICE', label: '2. Em Serviço', shortLabel: 'Em Serviço', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
-  { id: 'FINISHING', label: '3. Finalização', shortLabel: 'Finalização', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
-  { id: 'READY', label: '4. Pronto', shortLabel: 'Pronto', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
-  { id: 'DELIVERED', label: '5. Entregue', shortLabel: 'Entregue', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' },
+  { id: 'READY', label: '3. Pronto', shortLabel: 'Pronto', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' },
+  { id: 'DELIVERED', label: '4. Entregue', shortLabel: 'Entregue', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
 ];
 
 export default function AtendimentosPage() {
@@ -95,13 +95,13 @@ export default function AtendimentosPage() {
   const fetchWashes = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/washes');
+      const res = await fetch('/api/washes?mode=today_operational');
       if (res.ok) {
         setWashes(await res.json());
       }
     } catch (err) {
       console.error(err);
-      showToast('Erro ao carregar atendimentos', 'error');
+      showToast('Erro ao carregar atendimentos do dia', 'error');
     } finally {
       setLoading(false);
     }
@@ -378,12 +378,6 @@ export default function AtendimentosPage() {
           >
             🚗 No Pátio ({countActive})
           </button>
-          <button
-            className={`filter-chip ${activeFilter === 'ALL' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('ALL')}
-          >
-            Todos ({washes.length})
-          </button>
           {STATUS_STEPS.map((s) => (
             <button
               key={s.id}
@@ -393,6 +387,13 @@ export default function AtendimentosPage() {
               {s.shortLabel} ({countByStatus(s.id)})
             </button>
           ))}
+          <Link
+            href="/historico"
+            className="filter-chip"
+            style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)', textDecoration: 'none', marginLeft: 'auto' }}
+          >
+            📜 Ver Histórico Completo →
+          </Link>
         </div>
       </div>
 

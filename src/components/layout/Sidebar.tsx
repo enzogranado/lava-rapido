@@ -83,9 +83,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="sidebar-logo-sub">Sistema de Gestão</div>
           </div>
           <button
-            className="modal-close"
+            className="modal-close sidebar-close-btn"
             onClick={onClose}
-            style={{ marginLeft: 'auto', display: 'none' }}
+            aria-label="Fechar Menu"
             id="sidebar-close-btn"
           >
             <X size={20} />

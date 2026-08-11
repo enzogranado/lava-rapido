@@ -61,13 +61,13 @@ export default function CadastroPage() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      width: '100vw',
+      minHeight: '100dvh',
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       background: 'radial-gradient(circle at 50% 35%, #16203d 0%, #0a0e1a 75%)',
-      padding: '24px',
+      padding: '16px',
       boxSizing: 'border-box'
     }}>
       <div style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '28px' }}>

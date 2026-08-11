@@ -33,7 +33,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
-        <MobileNav />
+        <MobileNav onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       </div>
     </ToastProvider>
   );

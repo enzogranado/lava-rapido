@@ -508,7 +508,7 @@ export default function AtendimentosPage() {
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
                     Alterar Status da Lavagem (Clique para Mudar):
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                     {STATUS_STEPS.map((step, idx) => {
                       const isCurrent = wash.status === step.id;
                       return (
@@ -718,7 +718,7 @@ export default function AtendimentosPage() {
                 {selectedCustomer && selectedVehicleId && (
                   <div className="form-group">
                     <label className="form-label">Serviços Contratados Nesta Visita</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
                       {services.map((svc) => {
                         const selected = selectedServices.find((s) => s.serviceId === svc.id);
                         return (

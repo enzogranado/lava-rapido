@@ -503,21 +503,26 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div style={{ height: '320px', width: '100%', marginTop: '16px' }}>
+        <div className="chart-canvas-wrapper">
           {chartData ? (
             <LineChart
               data={chartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                  mode: 'index',
+                  intersect: false,
+                },
                 plugins: {
                   legend: { display: false },
                   tooltip: {
-                    backgroundColor: '#1a1f35',
+                    backgroundColor: '#111627',
                     titleColor: '#f0f4f8',
                     bodyColor: '#94a3b8',
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderColor: 'rgba(255,255,255,0.15)',
                     borderWidth: 1,
+                    padding: 10,
                     callbacks: {
                       label: (context) => {
                         const val = context.parsed.y ?? 0;
@@ -530,16 +535,29 @@ export default function DashboardPage() {
                   },
                 },
                 scales: {
-                  x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
-                  y: {
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                  x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
                     ticks: {
                       color: '#94a3b8',
+                      autoSkip: true,
+                      maxTicksLimit: 6,
+                      maxRotation: 0,
+                      minRotation: 0,
+                      font: { size: 10 },
+                    },
+                  },
+                  y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: {
+                      color: '#94a3b8',
+                      font: { size: 10 },
                       callback: (value) => {
+                        const num = Number(value);
                         if (chartMetric === 'revenue') {
-                          return `R$ ${value}`;
+                          if (num >= 1000) return `R$ ${(num / 1000).toFixed(1).replace('.0', '')}k`;
+                          return `R$ ${num}`;
                         }
-                        return value;
+                        return num;
                       },
                     },
                   },

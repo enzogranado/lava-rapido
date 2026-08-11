@@ -69,48 +69,48 @@ export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
   return (
     <header className="header">
       <div className="header-left">
-        <button className="menu-toggle" onClick={onMenuToggle}>
+        <button className="menu-toggle" onClick={onMenuToggle} aria-label="Abrir Menu">
           <Menu size={20} />
         </button>
-        <div>
+        <div className="header-title-wrapper">
           <h1 className="header-title">{pageInfo.title}</h1>
           <p className="header-subtitle">{pageInfo.subtitle}</p>
         </div>
       </div>
 
-      <div className="header-right" style={{ gap: '16px' }}>
+      <div className="header-right">
         {session && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="header-tenant-badge">
             {session.role === 'SUPER_ADMIN' ? (
-              <ShieldCheck size={16} color="#a855f7" />
+              <ShieldCheck size={16} color="#a855f7" className="flex-shrink-0" />
             ) : (
-              <Store size={16} color="var(--color-primary-400)" />
+              <Store size={16} color="var(--color-primary-400)" className="flex-shrink-0" />
             )}
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <span className="header-tenant-name">
               {session.tenantName || session.name}
             </span>
           </div>
         )}
 
-        <span className="header-date" style={{ textTransform: 'capitalize' }}>{currentDate}</span>
+        <span className="header-date">{currentDate}</span>
         
         {onNewWash && pathname !== '/admin' && (
-          <button className="btn btn-primary" onClick={onNewWash} id="header-new-wash-btn">
+          <button className="btn btn-primary header-action-btn" onClick={onNewWash} id="header-new-wash-btn">
             <Plus size={18} />
-            Novo Atendimento
+            <span className="btn-label-desktop">Novo Atendimento</span>
+            <span className="btn-label-mobile">Novo</span>
           </button>
         )}
 
         {session && (
           <button
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm header-logout-btn"
             onClick={handleLogout}
             title="Sair da conta"
-            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.08)', gap: '6px' }}
             id="header-logout-btn"
           >
             <LogOut size={16} />
-            <span>Sair</span>
+            <span className="btn-label-desktop">Sair</span>
           </button>
         )}
       </div>

@@ -136,7 +136,7 @@ export default function FinanceiroPage() {
             <div className="chart-header">
               <h3 className="chart-title">Evolução da Receita (R$)</h3>
             </div>
-            <div style={{ height: '320px', width: '100%' }}>
+            <div className="chart-canvas-wrapper">
               <LineChart
                 data={{
                   labels: revenueData.chartData.map((d) => d.date),
@@ -149,18 +149,56 @@ export default function FinanceiroPage() {
                       borderWidth: 3,
                       fill: true,
                       tension: 0.4,
+                      pointBackgroundColor: '#22c55e',
+                      pointRadius: 3,
                     },
                   ],
                 }}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
+                  interaction: {
+                    mode: 'index',
+                    intersect: false,
+                  },
                   plugins: {
                     legend: { display: false },
+                    tooltip: {
+                      backgroundColor: '#111627',
+                      titleColor: '#f0f4f8',
+                      bodyColor: '#94a3b8',
+                      borderColor: 'rgba(255,255,255,0.15)',
+                      borderWidth: 1,
+                      padding: 10,
+                      callbacks: {
+                        label: (context) => ` Receita: ${formatCurrency(context.parsed.y ?? 0)}`,
+                      },
+                    },
                   },
                   scales: {
-                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
-                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: {
+                      grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                      ticks: {
+                        color: '#94a3b8',
+                        autoSkip: true,
+                        maxTicksLimit: 6,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        font: { size: 10 },
+                      },
+                    },
+                    y: {
+                      grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                      ticks: {
+                        color: '#94a3b8',
+                        font: { size: 10 },
+                        callback: (val) => {
+                          const num = Number(val);
+                          if (num >= 1000) return `R$ ${(num / 1000).toFixed(1).replace('.0', '')}k`;
+                          return `R$ ${num}`;
+                        },
+                      },
+                    },
                   },
                 }}
               />

@@ -130,7 +130,7 @@ export default function VeiculosPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="search-bar" style={{ maxWidth: '400px' }}>
+      <div className="search-bar">
         <Search className="search-bar-icon" size={18} />
         <input
           type="text"

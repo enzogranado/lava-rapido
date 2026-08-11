@@ -1,11 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
-import ClientesPage from "./clientes/page";
 
 export const metadata: Metadata = {
   title: "Lava Rápido — Sistema de Gestão",
   description: "Sistema completo de gestão para lava-rápidos. Cadastro de clientes, veículos, serviços, controle operacional e financeiro.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0a0e1a",
 };
 
 export default function RootLayout({

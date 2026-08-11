@@ -155,7 +155,7 @@ export default function HistoricoPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
           
           {/* Search Input */}
-          <div className="search-bar" style={{ flex: 1, minWidth: '280px', maxWidth: '400px' }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: '240px' }}>
             <Search className="search-bar-icon" size={18} />
             <input
               type="text"

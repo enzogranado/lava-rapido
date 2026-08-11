@@ -145,7 +145,7 @@ export default function ClientesPage() {
 
       {/* Filter and Search Bar */}
       <div className="filter-bar">
-        <div className="search-bar" style={{ flex: 1, maxWidth: '400px' }}>
+        <div className="search-bar" style={{ flex: 1, minWidth: '240px' }}>
           <Search className="search-bar-icon" size={18} />
           <input
             type="text"

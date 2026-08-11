@@ -10,7 +10,7 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/me',
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Ignore Next.js internals, static assets, and media files

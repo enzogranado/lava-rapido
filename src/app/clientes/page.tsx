@@ -11,8 +11,9 @@ import {
   Trash2,
   X,
   Car,
+  MessageCircle,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, whatsappLink } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface Customer {
@@ -225,7 +226,21 @@ export default function ClientesPage() {
                       {c.name}
                     </Link>
                   </td>
-                  <td>{c.phone}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>{c.phone}</span>
+                      <a
+                        href={whatsappLink(c.phone)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Conversar no WhatsApp"
+                        className="btn btn-whatsapp btn-sm"
+                        style={{ padding: '3px 7px', fontSize: '0.75rem', borderRadius: '6px' }}
+                      >
+                        <MessageCircle size={13} />
+                      </a>
+                    </div>
+                  </td>
                   <td>
                     {c.vehicles.length === 0 ? (
                       <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>Nenhum veículo</span>

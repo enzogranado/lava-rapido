@@ -134,14 +134,48 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   };
 }
 
-// Generate WhatsApp deep link
+// Generate WhatsApp link (Detects Mobile vs Desktop for seamless opening)
 export function whatsappLink(phone: string, message?: string): string {
-  const cleaned = phone.replace(/\D/g, '');
-  const baseUrl = `https://wa.me/${cleaned}`;
-  if (message) {
-    return `${baseUrl}?text=${encodeURIComponent(message)}`;
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11 || cleaned.length === 10) {
+    cleaned = '55' + cleaned;
   }
-  return baseUrl;
+  const encodedText = message ? encodeURIComponent(message) : '';
+
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    return `https://wa.me/${cleaned}${encodedText ? `?text=${encodedText}` : ''}`;
+  }
+
+  // On Desktop: web.whatsapp.com opens directly in browser tab without OS app prompt
+  return `https://web.whatsapp.com/send?phone=${cleaned}${encodedText ? `&text=${encodedText}` : ''}`;
+}
+
+// Build ready message from template
+export function buildReadyMessage(
+  template: string | null | undefined,
+  customerName: string,
+  vehicleModel: string,
+  vehiclePlate: string
+): string {
+  const defaultTemplate =
+    'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿';
+  const tpl = template || defaultTemplate;
+  return tpl
+    .replace(/{nome}/g, customerName)
+    .replace(/{modelo}/g, vehicleModel)
+    .replace(/{placa}/g, vehiclePlate);
+}
+
+// Open WhatsApp directly without async delay
+export function openWhatsAppDirect(phone: string, message?: string) {
+  const url = whatsappLink(phone, message);
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
 
 // CN helper for conditional classnames

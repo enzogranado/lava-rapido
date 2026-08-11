@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatTime, timeDuration, STATUS_LABELS } from '@/lib/utils';
+import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, buildReadyMessage, openWhatsAppDirect } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface Service {
@@ -120,8 +120,18 @@ export default function AtendimentosPage() {
     }
   };
 
+  const [whatsappTemplate, setWhatsappTemplate] = useState<string>('');
+
   useEffect(() => {
     fetchWashes();
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.whatsappMessageTemplate) {
+          setWhatsappTemplate(data.whatsappMessageTemplate);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const openNewWashModal = () => {
@@ -156,30 +166,24 @@ export default function AtendimentosPage() {
     }
   };
 
-  const handleSendWhatsApp = async (washId: string) => {
-    try {
-      setSendingWhatsappId(washId);
-      const res = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ washId }),
-      });
+  const handleSendWhatsApp = (wash: Wash) => {
+    const messageText = buildReadyMessage(
+      whatsappTemplate,
+      wash.customer.name,
+      wash.vehicle.model,
+      wash.vehicle.plate
+    );
 
-      const data = await res.json();
-      if (res.ok) {
-        showToast('Mensagem enviada para o cliente!', 'success');
-        if (data.isWebFallback && data.webLink) {
-          window.open(data.webLink, '_blank');
-        }
-      } else {
-        showToast(data.error || 'Erro ao enviar WhatsApp', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao enviar mensagem', 'error');
-    } finally {
-      setSendingWhatsappId(null);
-    }
+    // Open WhatsApp directly without async delay or popup blockers
+    openWhatsAppDirect(wash.customer.phone, messageText);
+    showToast('Abrindo WhatsApp para enviar aviso...', 'success');
+
+    // Asynchronously log send in background
+    fetch('/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ washId: wash.id }),
+    }).catch((err) => console.error('Error logging WhatsApp message send:', err));
   };
 
   // Quick Customer + Vehicle creation inline inside wash registration
@@ -483,11 +487,10 @@ export default function AtendimentosPage() {
                     {isReady && (
                       <button
                         className="btn btn-whatsapp"
-                        onClick={() => handleSendWhatsApp(wash.id)}
-                        disabled={sendingWhatsappId === wash.id}
+                        onClick={() => handleSendWhatsApp(wash)}
                       >
                         <MessageCircle size={18} />
-                        {sendingWhatsappId === wash.id ? 'Enviando...' : '📱 Avisar Cliente'}
+                        📱 Avisar Cliente
                       </button>
                     )}
                   </div>

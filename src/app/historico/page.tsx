@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { History, Search, Calendar, DollarSign, Car, MessageCircle, FileText, Filter, CheckCircle2, Droplets } from 'lucide-react';
-import { formatCurrency, formatDate, formatTime, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime, STATUS_LABELS, STATUS_COLORS, buildReadyMessage, openWhatsAppDirect } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface WashItem {
@@ -37,6 +37,7 @@ export default function HistoricoPage() {
   const [period, setPeriod] = useState<string>('30d'); // today, 7d, 30d, all
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [whatsappTemplate, setWhatsappTemplate] = useState<string>('');
   const { showToast } = useToast();
 
   const fetchHistory = async () => {
@@ -62,6 +63,14 @@ export default function HistoricoPage() {
 
   useEffect(() => {
     fetchHistory();
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.whatsappMessageTemplate) {
+          setWhatsappTemplate(data.whatsappMessageTemplate);
+        }
+      })
+      .catch(() => {});
   }, [period, statusFilter]);
 
   const filteredWashes = washes.filter((w) => {
@@ -82,28 +91,24 @@ export default function HistoricoPage() {
   const totalDelivered = filteredWashes.filter((w) => w.status === 'DELIVERED').length;
   const ticketMedio = totalDelivered > 0 ? totalRevenue / totalDelivered : 0;
 
-  const handleSendWhatsapp = async (wash: Wash) => {
-    try {
-      showToast('Gerando mensagem do WhatsApp...', 'info');
-      const res = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ washId: wash.id }),
-      });
+  const handleSendWhatsapp = (wash: Wash) => {
+    const messageText = buildReadyMessage(
+      whatsappTemplate,
+      wash.customer.name,
+      wash.vehicle.model,
+      wash.vehicle.plate
+    );
 
-      if (res.ok) {
-        const data = await res.json();
-        showToast('Histórico enviado para o WhatsApp!', 'success');
-        if (data.webLink) {
-          window.open(data.webLink, '_blank');
-        }
-      } else {
-        showToast('Erro ao enviar mensagem', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao abrir WhatsApp', 'error');
-    }
+    // Open WhatsApp directly without async delay
+    openWhatsAppDirect(wash.customer.phone, messageText);
+    showToast('Abrindo WhatsApp...', 'success');
+
+    // Register log in background
+    fetch('/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ washId: wash.id }),
+    }).catch((err) => console.error('Error logging WhatsApp send:', err));
   };
 
   return (

@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/settings — Retrieve system settings
-export async function GET() {
+// GET /api/settings — Retrieve system settings for current tenant
+export async function GET(request: NextRequest) {
   try {
-    let settings = await prisma.settings.findUnique({ where: { id: 'default' } });
+    const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
 
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (tenant) {
+      return NextResponse.json({
+        id: tenant.id,
+        businessName: tenant.name,
+        inactiveDaysLimit: tenant.inactiveDaysLimit,
+        whatsappMessageTemplate: tenant.whatsappMessageTemplate,
+        pendingPinChange: tenant.pendingPinChange,
+        pinChangeStatus: tenant.pinChangeStatus,
+      });
+    }
+
+    let settings = await prisma.settings.findUnique({ where: { id: 'default' } });
     if (!settings) {
       settings = await prisma.settings.create({
         data: { id: 'default', businessName: 'Meu Lava Rápido', inactiveDaysLimit: 45 },
@@ -19,28 +36,32 @@ export async function GET() {
   }
 }
 
-// PUT /api/settings — Update settings
+// PUT /api/settings — Update settings for current tenant
 export async function PUT(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { businessName, inactiveDaysLimit, whatsappMessageTemplate } = body;
 
-    const settings = await prisma.settings.upsert({
-      where: { id: 'default' },
-      update: {
-        ...(businessName && { businessName }),
+    const updatedTenant = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(businessName && { name: businessName }),
         ...(inactiveDaysLimit !== undefined && { inactiveDaysLimit: parseInt(inactiveDaysLimit, 10) }),
         ...(whatsappMessageTemplate !== undefined && { whatsappMessageTemplate }),
       },
-      create: {
-        id: 'default',
-        businessName: businessName || 'Meu Lava Rápido',
-        inactiveDaysLimit: parseInt(inactiveDaysLimit, 10) || 45,
-        whatsappMessageTemplate,
-      },
     });
 
-    return NextResponse.json(settings);
+    return NextResponse.json({
+      id: updatedTenant.id,
+      businessName: updatedTenant.name,
+      inactiveDaysLimit: updatedTenant.inactiveDaysLimit,
+      whatsappMessageTemplate: updatedTenant.whatsappMessageTemplate,
+    });
   } catch (error) {
     console.error('Error updating settings:', error);
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });

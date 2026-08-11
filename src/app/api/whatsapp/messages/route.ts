@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getTenantIdOrFallback } from '@/lib/auth';
 
-// GET /api/whatsapp/messages — List message log
-export async function GET() {
+// GET /api/whatsapp/messages — List message log for current tenant
+export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const messages = await prisma.whatsAppMessage.findMany({
+      where: { tenantId },
       include: {
         customer: { select: { id: true, name: true, phone: true } },
         wash: {

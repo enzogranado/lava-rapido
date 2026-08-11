@@ -55,6 +55,9 @@ export default function Header({ onMenuToggle, onNewWash }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('dashboard_unlocked');
+      }
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
       router.refresh();

@@ -6,6 +6,9 @@ import { getTenantIdOrFallback } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const customerId = searchParams.get('customerId');
@@ -43,6 +46,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
     const body = await request.json();
     const { customerId, model, plate, color, notes } = body;
 

@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days expiration
     const sessionPayload = {
       userId: user.id,
       tenantId: user.tenantId,
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role as any,
       tenantName: user.tenant?.name || 'Sistema',
+      expiresAt,
     };
 
     const token = createSessionToken(sessionPayload);
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
       value: token,
       httpOnly: true,
       path: '/',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       sameSite: 'lax',
     });
 

@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     else if (range === '1y') startDate.setFullYear(now.getFullYear() - 1);
 
     const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
 
     const washes = await prisma.wash.findMany({
       where: {

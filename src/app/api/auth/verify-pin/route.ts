@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 404 });
+    }
     let tenant = null;
     try {
       tenant = await prisma.tenant.findUnique({

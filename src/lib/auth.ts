@@ -1,16 +1,7 @@
 import { NextRequest } from 'next/server';
+import { COOKIE_NAME, parseSessionToken, type AuthSession } from './session';
 
-export interface AuthSession {
-  userId: string;
-  tenantId: string | null;
-  name: string;
-  email: string;
-  role: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'TENANT_USER';
-  tenantName?: string;
-  expiresAt?: number;
-}
-
-const COOKIE_NAME = 'lava_session';
+export { COOKIE_NAME, parseSessionToken, createSessionToken, type AuthSession } from './session';
 
 // Hash password with salt
 export function hashPassword(password: string): string {
@@ -23,31 +14,6 @@ export function hashPassword(password: string): string {
 // Verify password
 export function verifyPassword(password: string, hash: string): boolean {
   return hashPassword(password) === hash;
-}
-
-// Encode session token with 7-day default expiration
-export function createSessionToken(session: AuthSession): string {
-  const expiresAt = session.expiresAt || (Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const sessionPayload = { ...session, expiresAt };
-  const data = JSON.stringify(sessionPayload);
-  return Buffer.from(data).toString('base64');
-}
-
-// Decode session token and verify expiration
-export function parseSessionToken(token: string): AuthSession | null {
-  try {
-    const data = Buffer.from(token, 'base64').toString('utf-8');
-    const session = JSON.parse(data) as AuthSession;
-    
-    // Check if token has expired
-    if (session.expiresAt && Date.now() > session.expiresAt) {
-      return null;
-    }
-    
-    return session;
-  } catch (err) {
-    return null;
-  }
 }
 
 // Get session from NextRequest cookies
@@ -103,5 +69,3 @@ export async function getTenantIdOrFallback(request: NextRequest): Promise<strin
 
   return null;
 }
-
-export { COOKIE_NAME };

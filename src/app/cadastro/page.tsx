@@ -73,7 +73,7 @@ export default function CadastroPage() {
       <div style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         
         {/* Header */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+        <Link href="/landing" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', cursor: 'pointer' }}>
           <div style={{
             width: '64px',
             height: '64px',
@@ -90,7 +90,7 @@ export default function CadastroPage() {
             <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>Cadastrar Novo Lava Rápido</h1>
             <p style={{ color: '#94a3b8', fontSize: '0.9375rem', marginTop: '6px' }}>Crie a conta da sua empresa e comece a gerenciar hoje mesmo</p>
           </div>
-        </div>
+        </Link>
 
         {/* Card */}
         <div style={{

@@ -11,9 +11,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  const isAuthPage = pathname === '/login' || pathname === '/cadastro';
+  const isStandalonePage = pathname === '/login' || pathname === '/cadastro' || pathname === '/landing';
 
-  if (isAuthPage) {
+  if (isStandalonePage) {
     return (
       <ToastProvider>
         {children}

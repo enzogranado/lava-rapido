@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COOKIE_NAME, parseSessionToken } from '@/lib/session';
 
-const PUBLIC_PAGES = ['/login', '/cadastro'];
+const PUBLIC_PAGES = ['/login', '/cadastro', '/landing'];
 const PUBLIC_API_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',

@@ -58,7 +58,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         
         {/* Header Branding */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+        <Link href="/landing" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', cursor: 'pointer' }}>
           <div style={{
             width: '64px',
             height: '64px',
@@ -75,7 +75,7 @@ export default function LoginPage() {
             <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>Lava Rápido OS</h1>
             <p style={{ color: '#94a3b8', fontSize: '0.9375rem', marginTop: '6px' }}>Acesse a plataforma de gestão do seu lava-rápido</p>
           </div>
-        </div>
+        </Link>
 
         {/* Login Form Card */}
         <div style={{

@@ -82,7 +82,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Droplets size={22} color="white" />
           </div>
           <div>
-            <div className="sidebar-logo-text">{session?.tenantName || 'Lava Rápido'}</div>
+            <div className="sidebar-logo-text">{session?.tenantName || 'LavaFlow'}</div>
             <div className="sidebar-logo-sub">Sistema de Gestão</div>
           </div>
           <button

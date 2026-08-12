@@ -32,7 +32,7 @@ async function main() {
   await prisma.settings.create({
     data: {
       id: 'default',
-      businessName: 'Meu Lava Rápido',
+      businessName: 'LavaFlow',
       inactiveDaysLimit: 45,
     },
   });

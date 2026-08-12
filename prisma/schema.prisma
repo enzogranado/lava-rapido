@@ -1,4 +1,4 @@
-// Prisma schema for Sistema Lava Rápido (Multi-Tenant Architecture)
+// Prisma schema for LavaFlow (Multi-Tenant Architecture)
 // Database: SQLite (can be migrated to PostgreSQL later)
 
 generator client {
@@ -182,7 +182,7 @@ model WhatsAppMessage {
 
 model Settings {
   id                      String   @id @default("default")
-  businessName            String   @default("Meu Lava Rápido")
+  businessName            String   @default("LavaFlow")
   inactiveDaysLimit       Int      @default(45)
   whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
   createdAt               DateTime @default(now())

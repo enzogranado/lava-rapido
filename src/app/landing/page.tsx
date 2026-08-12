@@ -32,7 +32,7 @@ export default function LandingPage() {
   const faqItems = [
     {
       q: 'O sistema precisa de instalação no computador?',
-      a: 'Não! O Lava Rápido OS funciona 100% online na nuvem. Você pode acessar pelo navegador do seu celular, tablet, notebook ou computador de mesa de onde estiver.',
+      a: 'Não! O LavaFlow funciona 100% online na nuvem. Você pode acessar pelo navegador do seu celular, tablet, notebook ou computador de mesa de onde estiver.',
     },
     {
       q: 'Como funciona o envio de mensagens pelo WhatsApp?',
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </div>
             <div>
               <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
-                Lava Rápido <span style={{ color: '#06b6d4' }}>OS</span>
+                Lava<span style={{ color: '#06b6d4' }}>Flow</span>
               </span>
             </div>
           </Link>
@@ -324,7 +324,7 @@ export default function LandingPage() {
                   <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }} />
                   <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#eab308' }} />
                   <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#22c55e' }} />
-                  <span style={{ fontSize: '0.8125rem', color: '#94a3b8', marginLeft: '12px', fontWeight: 600 }}>Painel Operacional — Lava Rápido OS</span>
+                  <span style={{ fontSize: '0.8125rem', color: '#94a3b8', marginLeft: '12px', fontWeight: 600 }}>Painel Operacional — LavaFlow</span>
                 </div>
                 <span style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>AO VIVO</span>
               </div>
@@ -434,7 +434,7 @@ export default function LandingPage() {
       <section id="como-funciona" style={{ padding: '100px 24px', maxWidth: '1240px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '60px' }}>
           <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>FLUXO SIMPLIFICADO</span>
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffffff', marginTop: '8px' }}>Como o Lava Rápido OS funciona na prática</h2>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffffff', marginTop: '8px' }}>Como o LavaFlow funciona na prática</h2>
           <p style={{ color: '#94a3b8', fontSize: '1.0625rem', marginTop: '10px' }}>Simplicidade do cadastro à entrega do veículo.</p>
         </div>
 
@@ -696,7 +696,7 @@ export default function LandingPage() {
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0088e6 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Droplets size={20} color="white" />
               </div>
-              <span style={{ fontSize: '1.125rem', fontWeight: 800, color: '#ffffff' }}>Lava Rápido OS</span>
+              <span style={{ fontSize: '1.125rem', fontWeight: 800, color: '#ffffff' }}>LavaFlow</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '0.875rem', color: '#94a3b8' }}>
@@ -707,7 +707,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', color: '#64748b', flexWrap: 'wrap', gap: '12px' }}>
-            <div>© {new Date().getFullYear()} Lava Rápido OS. Todos os direitos reservados.</div>
+            <div>© {new Date().getFullYear()} LavaFlow. Todos os direitos reservados.</div>
             <div>Desenvolvido com excelência para lava-rápidos e estéticas automotivas.</div>
           </div>
         </div>
@@ -715,7 +715,7 @@ export default function LandingPage() {
 
       {/* Floating WhatsApp Contact Button */}
       <a
-        href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20Lava%20R%C3%A1pido%20OS."
+        href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20LavaFlow."
         target="_blank"
         rel="noreferrer"
         style={{

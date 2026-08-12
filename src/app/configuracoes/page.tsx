@@ -18,7 +18,7 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/settings');
       if (res.ok) {
         const data = await res.json();
-        setBusinessName(data.businessName || 'Meu Lava Rápido');
+        setBusinessName(data.businessName || 'LavaFlow');
         setInactiveDaysLimit(data.inactiveDaysLimit || 45);
         setWhatsappTemplate(
           data.whatsappMessageTemplate ||

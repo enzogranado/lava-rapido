@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     let settings = await prisma.settings.findUnique({ where: { id: 'default' } });
     if (!settings) {
       settings = await prisma.settings.create({
-        data: { id: 'default', businessName: 'Meu Lava Rápido', inactiveDaysLimit: 45 },
+        data: { id: 'default', businessName: 'LavaFlow', inactiveDaysLimit: 45 },
       });
     }
 

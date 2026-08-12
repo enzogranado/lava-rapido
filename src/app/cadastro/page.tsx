@@ -87,7 +87,7 @@ export default function CadastroPage() {
             <Droplets size={36} color="white" />
           </div>
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>Cadastrar Novo Lava Rápido</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>Criar Conta no LavaFlow</h1>
             <p style={{ color: '#94a3b8', fontSize: '0.9375rem', marginTop: '6px' }}>Crie a conta da sua empresa e comece a gerenciar hoje mesmo</p>
           </div>
         </Link>
@@ -376,7 +376,7 @@ export default function CadastroPage() {
                 <div className="loading-spinner" style={{ width: 22, height: 22 }} />
               ) : (
                 <>
-                  Criar Conta do Lava Rápido <ArrowRight size={18} />
+                  Criar Conta no LavaFlow <ArrowRight size={18} />
                 </>
               )}
             </button>

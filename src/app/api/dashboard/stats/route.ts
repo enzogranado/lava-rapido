@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     const avgVisitsPerCustomer = totalCustomers > 0 ? (washesMonth / totalCustomers).toFixed(1) : '0.0';
 
     return NextResponse.json({
-      tenantName: tenant?.name || 'Lava Rápido',
+      tenantName: tenant?.name || 'LavaFlow',
       totalCustomers,
       totalVehicles,
       washesToday,

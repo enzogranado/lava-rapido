@@ -47,7 +47,7 @@ export async function getSession(request: NextRequest): Promise<AuthSession | nu
     name: user.name,
     email: user.email,
     role: user.role as any,
-    tenantName: user.tenant?.name || 'Lava Rápido',
+    tenantName: user.tenant?.name || 'LavaFlow',
     expiresAt: session.expiresAt,
   };
 }

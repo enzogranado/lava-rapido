@@ -72,8 +72,8 @@ export default function LoginPage() {
             <Droplets size={36} color="white" />
           </div>
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>Lava Rápido OS</h1>
-            <p style={{ color: '#94a3b8', fontSize: '0.9375rem', marginTop: '6px' }}>Acesse a plataforma de gestão do seu lava-rápido</p>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f0f4f8', letterSpacing: '-0.02em' }}>LavaFlow</h1>
+            <p style={{ color: '#94a3b8', fontSize: '0.9375rem', marginTop: '6px' }}>Acesse a plataforma de gestão LavaFlow</p>
           </div>
         </Link>
 
@@ -201,7 +201,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', fontSize: '0.9375rem', color: '#94a3b8' }}>
           Ainda não cadastrou seu lava-rápido?{' '}
           <Link href="/cadastro" style={{ color: '#38bdf8', fontWeight: 600, textDecoration: 'none' }}>
-            Cadastrar Novo Lava Rápido
+            Cadastrar no LavaFlow
           </Link>
         </div>
 

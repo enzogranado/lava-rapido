@@ -3,7 +3,7 @@ import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "Lava Rápido — Sistema de Gestão",
+  title: "LavaFlow — Sistema de Gestão",
   description: "Sistema completo de gestão para lava-rápidos. Cadastro de clientes, veículos, serviços, controle operacional e financeiro.",
 };
 

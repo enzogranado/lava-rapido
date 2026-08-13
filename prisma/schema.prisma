@@ -26,6 +26,7 @@ model Tenant {
   pinChangeStatus         String?  // null, PENDING, APPROVED, REJECTED
   inactiveDaysLimit       Int      @default(45)
   whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
+  whatsappRecallTemplate  String   @default("Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿")
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
@@ -185,6 +186,7 @@ model Settings {
   businessName            String   @default("LavaFlow")
   inactiveDaysLimit       Int      @default(45)
   whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
+  whatsappRecallTemplate  String   @default("Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿")
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }

@@ -58,6 +58,8 @@ interface DashboardStats {
   customersToday: number;
   recurrentCustomersCount: number;
   inactiveCustomersCount: number;
+  inactiveDaysLimit?: number;
+  whatsappRecallTemplate?: string;
   revenueToday: number;
   revenueWeek: number;
   revenueMonth: number;
@@ -443,7 +445,7 @@ export default function DashboardPage() {
               <UserX size={22} />
             </div>
             <div className="stat-card-value">{stats.inactiveCustomersCount}</div>
-            <div className="stat-card-label">Clientes Inativos (&gt;45 dias)</div>
+            <div className="stat-card-label">Clientes Inativos (&gt;{stats.inactiveDaysLimit || 45} dias)</div>
           </div>
 
           <div className="stat-card">
@@ -576,7 +578,7 @@ export default function DashboardPage() {
       <div className="card">
         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserX size={20} color="var(--color-danger)" />
-          Clientes que Precisam de Atenção (Inativos)
+          Clientes que Precisam de Atenção (Inativos &gt;{stats.inactiveDaysLimit || 45} dias)
         </h3>
 
         {stats.inactiveCustomersList.length === 0 ? (
@@ -594,30 +596,36 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {stats.inactiveCustomersList.map((c) => (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 600 }}>{c.name}</td>
-                    <td>{c.phone}</td>
-                    <td>{c.lastVisit ? formatDate(c.lastVisit) : 'Nunca'}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge badge-danger">
-                        <Clock size={12} />
-                        {c.daysWithoutVisit ? `${c.daysWithoutVisit} dias` : 'Sem visitas'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <a
-                        href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${c.name}! Sentimos sua falta aqui no lava-rápido. Que tal agendar uma lavagem hoje? 🚗✨`)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-whatsapp btn-sm"
-                      >
-                        <MessageCircle size={14} />
-                        Avisar pelo WhatsApp
-                      </a>
-                    </td>
-                  </tr>
-                ))}
+                {stats.inactiveCustomersList.map((c) => {
+                  const recallMsg = (stats.whatsappRecallTemplate || 'Olá, {nome}! Sentimos sua falta aqui no lava-rápido. Notamos que faz {dias} dias que seu veículo não recebe uma higienização. Que tal agendar uma lavagem hoje? 🚗✨')
+                    .replace(/{nome}/g, c.name)
+                    .replace(/{dias}/g, String(c.daysWithoutVisit || stats.inactiveDaysLimit || 45));
+
+                  return (
+                    <tr key={c.id}>
+                      <td style={{ fontWeight: 600 }}>{c.name}</td>
+                      <td>{c.phone}</td>
+                      <td>{c.lastVisit ? formatDate(c.lastVisit) : 'Nunca'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="badge badge-danger">
+                          <Clock size={12} />
+                          {c.daysWithoutVisit ? `${c.daysWithoutVisit} dias` : 'Sem visitas'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <a
+                          href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(recallMsg)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-whatsapp btn-sm"
+                        >
+                          <MessageCircle size={14} />
+                          Avisar pelo WhatsApp
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -265,6 +265,11 @@ export default function HistoricoPage() {
                             )}
                           </div>
                         ))}
+                        {wash.notes && (
+                          <div style={{ fontSize: '0.75rem', color: '#fef3c7', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '2px 8px', borderRadius: '6px', marginTop: '4px' }}>
+                            📌 <strong>Obs:</strong> {wash.notes}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-primary-400)', fontSize: '0.9375rem' }}>

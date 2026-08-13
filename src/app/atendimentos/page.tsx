@@ -49,6 +49,7 @@ interface Wash {
   subtotal: number;
   discount: number;
   total: number;
+  notes?: string;
   createdAt: string;
   completedAt?: string;
   customer: { id: string; name: string; phone: string };
@@ -81,6 +82,7 @@ export default function AtendimentosPage() {
     Array<{ serviceId: string; unitPrice: number; quantity: number }>
   >([]);
   const [discount, setDiscount] = useState<number>(0);
+  const [notes, setNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   // Inline Quick Registration state (Inside Modal)
@@ -140,6 +142,7 @@ export default function AtendimentosPage() {
     setSelectedVehicleId('');
     setSelectedServices([]);
     setDiscount(0);
+    setNotes('');
     setCustomerSearch('');
     setIsRegisteringQuick(false);
     setShowModal(true);
@@ -272,6 +275,7 @@ export default function AtendimentosPage() {
           vehicleId: selectedVehicleId,
           items: selectedServices,
           discount,
+          notes,
         }),
       });
 
@@ -511,6 +515,26 @@ export default function AtendimentosPage() {
                     </span>
                   ))}
                 </div>
+
+                {/* Notes / Avarias Display */}
+                {wash.notes && (
+                  <div
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.8125rem',
+                      color: '#fef3c7',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: '#f59e0b', whiteSpace: 'nowrap' }}>📌 Obs / Avarias:</span>
+                    <span>{wash.notes}</span>
+                  </div>
+                )}
 
                 {/* 1-CLICK INTERACTIVE PIPELINE BAR */}
                 <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
@@ -762,6 +786,23 @@ export default function AtendimentosPage() {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* Observações / Avarias do Veículo */}
+                {selectedCustomer && selectedVehicleId && (
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📝 Observações / Avarias do Veículo (Opcional)</span>
+                    </label>
+                    <textarea
+                      className="form-input"
+                      rows={2}
+                      placeholder="Ex: Arranhão no para-choque traseiro, mancha no banco do motorista, deixar chave na recepção..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      style={{ resize: 'vertical', width: '100%', fontFamily: 'inherit', fontSize: '0.875rem' }}
+                    />
                   </div>
                 )}
 

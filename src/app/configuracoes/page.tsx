@@ -8,6 +8,7 @@ export default function ConfiguracoesPage() {
   const [businessName, setBusinessName] = useState('');
   const [inactiveDaysLimit, setInactiveDaysLimit] = useState(45);
   const [whatsappTemplate, setWhatsappTemplate] = useState('');
+  const [whatsappRecallTemplate, setWhatsappRecallTemplate] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
@@ -23,6 +24,10 @@ export default function ConfiguracoesPage() {
         setWhatsappTemplate(
           data.whatsappMessageTemplate ||
             'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿'
+        );
+        setWhatsappRecallTemplate(
+          data.whatsappRecallTemplate ||
+            'Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿'
         );
       }
     } catch (err) {
@@ -48,13 +53,15 @@ export default function ConfiguracoesPage() {
           businessName,
           inactiveDaysLimit,
           whatsappMessageTemplate: whatsappTemplate,
+          whatsappRecallTemplate,
         }),
       });
 
       if (res.ok) {
         showToast('Configurações salvas com sucesso!', 'success');
       } else {
-        showToast('Erro ao salvar configurações', 'error');
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || 'Erro ao salvar configurações', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -142,6 +149,27 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MessageCircle size={20} color="#eab308" />
+            Template da Mensagem de Recall (Reativação de Clientes Inativos)
+          </h3>
+
+          <div className="form-group">
+            <label className="form-label">Mensagem de Reativação via WhatsApp</label>
+            <textarea
+              className="form-input form-textarea"
+              style={{ minHeight: '120px' }}
+              value={whatsappRecallTemplate}
+              onChange={(e) => setWhatsappRecallTemplate(e.target.value)}
+              required
+            />
+            <span className="form-hint">
+              Campos automáticos substituídos: <code>{'{nome}'}</code>, <code>{'{dias}'}</code>
+            </span>
+          </div>
+        </div>
+
         {/* Dashboard PIN Change Request */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -212,7 +240,7 @@ function PinChangeRequestForm({ showToast }: { showToast: (msg: string, type: 's
   };
 
   return (
-    <form onSubmit={handleRequestPinChange} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {statusMsg && (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontSize: '0.875rem', fontWeight: 600 }}>
           {statusMsg}
@@ -229,7 +257,6 @@ function PinChangeRequestForm({ showToast }: { showToast: (msg: string, type: 's
             placeholder="••••"
             value={currentPin}
             onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            required
           />
         </div>
 
@@ -242,7 +269,6 @@ function PinChangeRequestForm({ showToast }: { showToast: (msg: string, type: 's
             placeholder="Ex: 5678"
             value={newPin}
             onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            required
             style={{ letterSpacing: '0.2em', fontWeight: 700 }}
           />
         </div>
@@ -256,14 +282,13 @@ function PinChangeRequestForm({ showToast }: { showToast: (msg: string, type: 's
           placeholder="Descreva o motivo da solicitação de alteração do PIN do Dashboard..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          required
         />
       </div>
 
-      <button type="submit" className="btn btn-secondary" disabled={submittingPin} style={{ alignSelf: 'flex-start' }}>
+      <button type="button" onClick={handleRequestPinChange} className="btn btn-secondary" disabled={submittingPin} style={{ alignSelf: 'flex-start' }}>
         <Lock size={16} />
         {submittingPin ? 'Enviando Solicitação...' : 'Enviar Solicitação de Troca de PIN ao Admin'}
       </button>
-    </form>
+    </div>
   );
 }

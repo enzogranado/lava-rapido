@@ -153,6 +153,8 @@ export async function GET(request: NextRequest) {
       customersToday,
       recurrentCustomersCount,
       inactiveCustomersCount,
+      inactiveDaysLimit: inactiveLimitDays,
+      whatsappRecallTemplate: tenant?.whatsappRecallTemplate || 'Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿',
       revenueToday,
       revenueWeek,
       revenueMonth,

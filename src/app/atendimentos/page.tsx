@@ -18,6 +18,11 @@ import {
   ShieldCheck,
   DollarSign,
   Lock,
+  List,
+  FileText,
+  CreditCard,
+  Banknote,
+  Zap,
 } from 'lucide-react';
 import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, buildReadyMessage, buildEntryCodeMessage, openWhatsAppDirect, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -475,13 +480,13 @@ export default function AtendimentosPage() {
             className={`filter-chip ${activeFilter === 'ACTIVE' ? 'active' : ''}`}
             onClick={() => setActiveFilter('ACTIVE')}
           >
-            🚗 No Pátio ({countActive})
+            No Pátio ({countActive})
           </button>
           <button
             className={`filter-chip ${activeFilter === 'ALL' ? 'active' : ''}`}
             onClick={() => setActiveFilter('ALL')}
           >
-            📋 Todos de Hoje ({washes.length})
+            Todos de Hoje ({washes.length})
           </button>
           {STATUS_STEPS.map((s) => (
             <button
@@ -497,7 +502,7 @@ export default function AtendimentosPage() {
             className="filter-chip"
             style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)', textDecoration: 'none', marginLeft: 'auto' }}
           >
-            📜 Ver Histórico Completo →
+            Ver Histórico Completo →
           </Link>
         </div>
       </div>
@@ -576,10 +581,13 @@ export default function AtendimentosPage() {
                               fontSize: '0.75rem',
                               fontWeight: 800,
                               fontFamily: 'monospace',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                             title="Código de Retirada do Cliente"
                           >
-                            🔑 Código: {wash.pickupCode}
+                            <Key size={12} /> Código: {wash.pickupCode}
                           </span>
                         )}
                         {wash.paymentMethod && (
@@ -587,12 +595,12 @@ export default function AtendimentosPage() {
                             className="badge badge-success"
                             style={{ fontSize: '0.75rem', padding: '2px 8px' }}
                           >
-                            {PAYMENT_METHOD_LABELS[wash.paymentMethod]?.icon} {PAYMENT_METHOD_LABELS[wash.paymentMethod]?.label || wash.paymentMethod}
+                            {PAYMENT_METHOD_LABELS[wash.paymentMethod]?.label || wash.paymentMethod}
                           </span>
                         )}
                       </div>
                       <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span>👤 <strong>{wash.customer.name}</strong> ({wash.customer.phone})</span>
+                        <span>Cliente: <strong>{wash.customer.name}</strong> ({wash.customer.phone})</span>
                         <span style={{ color: 'var(--text-tertiary)' }}>•</span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
                           <Clock size={14} /> Entrada: {formatTime(wash.createdAt)} ({timeDuration(wash.createdAt)})
@@ -619,7 +627,7 @@ export default function AtendimentosPage() {
                           style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
                         >
                           <MessageCircle size={16} />
-                          📲 Enviar Código
+                          Enviar Código
                         </button>
                       )}
 
@@ -629,7 +637,7 @@ export default function AtendimentosPage() {
                           onClick={() => handleSendWhatsApp(wash)}
                         >
                           <MessageCircle size={18} />
-                          📱 Avisar Pronto
+                          Avisar Pronto
                         </button>
                       )}
                     </div>
@@ -661,7 +669,8 @@ export default function AtendimentosPage() {
                       gap: '8px',
                     }}
                   >
-                    <span style={{ fontWeight: 700, color: '#f59e0b', whiteSpace: 'nowrap' }}>📌 Obs / Avarias:</span>
+                    <FileText size={14} style={{ color: '#f59e0b', marginTop: '2px' }} />
+                    <span style={{ fontWeight: 700, color: '#f59e0b', whiteSpace: 'nowrap' }}>Obs / Avarias:</span>
                     <span>{wash.notes}</span>
                   </div>
                 )}
@@ -923,7 +932,8 @@ export default function AtendimentosPage() {
                 {selectedCustomer && selectedVehicleId && (
                   <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>📝 Observações / Avarias do Veículo (Opcional)</span>
+                      <FileText size={16} />
+                      <span>Observações / Avarias do Veículo (Opcional)</span>
                     </label>
                     <textarea
                       className="form-input"
@@ -968,7 +978,7 @@ export default function AtendimentosPage() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary btn-lg" disabled={submitting || selectedServices.length === 0}>
-                  {submitting ? 'Registrando...' : '🚀 Colocar Carro na Lavagem'}
+                  {submitting ? 'Registrando...' : 'Colocar Carro na Lavagem'}
                 </button>
               </div>
             </form>
@@ -985,7 +995,9 @@ export default function AtendimentosPage() {
           >
             <div className="modal-header">
               <div>
-                <h2 className="modal-title">🔑 Finalizar Entrega & Pagamento</h2>
+                <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Key size={20} /> Finalizar Entrega & Pagamento
+                </h2>
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                   Selecione o método de pagamento e informe o código de segurança do cliente.
                 </p>
@@ -1020,17 +1032,18 @@ export default function AtendimentosPage() {
 
               {/* Payment Method Selector */}
               <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 700 }}>
-                  💳 Forma de Pagamento Realizada *
+                <label className="form-label" style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CreditCard size={16} /> Forma de Pagamento Realizada *
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                   {[
-                    { id: 'MONEY', label: 'Dinheiro', icon: '💵', color: '#22c55e' },
-                    { id: 'PIX', label: 'PIX', icon: '⚡', color: '#06b6d4' },
-                    { id: 'DEBIT', label: 'Cartão de Débito', icon: '💳', color: '#38bdf8' },
-                    { id: 'CREDIT', label: 'Cartão de Crédito', icon: '💳', color: '#a855f7' },
+                    { id: 'MONEY', label: 'Dinheiro', icon: Banknote, color: '#22c55e' },
+                    { id: 'PIX', label: 'PIX', icon: Zap, color: '#06b6d4' },
+                    { id: 'DEBIT', label: 'Cartão de Débito', icon: CreditCard, color: '#38bdf8' },
+                    { id: 'CREDIT', label: 'Cartão de Crédito', icon: CreditCard, color: '#a855f7' },
                   ].map((method) => {
                     const selected = deliveryPaymentMethod === method.id;
+                    const IconComp = method.icon;
                     return (
                       <div
                         key={method.id}
@@ -1049,7 +1062,7 @@ export default function AtendimentosPage() {
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <span style={{ fontSize: '1.25rem' }}>{method.icon}</span>
+                        <IconComp size={18} style={{ color: selected ? method.color : 'inherit' }} />
                         <span>{method.label}</span>
                       </div>
                     );
@@ -1061,7 +1074,7 @@ export default function AtendimentosPage() {
               <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="form-label" style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🛡️ Código de Retirada do Cliente</span>
+                    <ShieldCheck size={16} /> Código de Retirada do Cliente
                   </label>
                   {deliveryWash.pickupCode && (
                     <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>
@@ -1082,7 +1095,7 @@ export default function AtendimentosPage() {
                   />
                 ) : (
                   <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.875rem', fontWeight: 600 }}>
-                    🤝 Modo de confiança ativado: O veículo será liberado sem validação numérica do código.
+                    Modo de confiança ativado: O veículo será liberado sem validação numérica do código.
                   </div>
                 )}
 
@@ -1103,7 +1116,7 @@ export default function AtendimentosPage() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-success btn-lg" disabled={submittingDelivery}>
-                  {submittingDelivery ? 'Registrando Entrega...' : '✅ Confirmar Entrega & Pagamento'}
+                  {submittingDelivery ? 'Registrando Entrega...' : 'Confirmar Entrega & Pagamento'}
                 </button>
               </div>
             </form>

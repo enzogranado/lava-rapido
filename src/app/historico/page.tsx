@@ -267,7 +267,7 @@ export default function HistoricoPage() {
                         ))}
                         {wash.notes && (
                           <div style={{ fontSize: '0.75rem', color: '#fef3c7', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '2px 8px', borderRadius: '6px', marginTop: '4px' }}>
-                            📌 <strong>Obs:</strong> {wash.notes}
+                            <strong>Obs:</strong> {wash.notes}
                           </div>
                         )}
                       </div>
@@ -276,7 +276,7 @@ export default function HistoricoPage() {
                       <div>{formatCurrency(wash.total)}</div>
                       {(wash as any).paymentMethod && (
                         <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginTop: '2px' }}>
-                          {PAYMENT_METHOD_LABELS[(wash as any).paymentMethod]?.icon} {PAYMENT_METHOD_LABELS[(wash as any).paymentMethod]?.label || (wash as any).paymentMethod}
+                          {PAYMENT_METHOD_LABELS[(wash as any).paymentMethod]?.label || (wash as any).paymentMethod}
                         </div>
                       )}
                     </td>

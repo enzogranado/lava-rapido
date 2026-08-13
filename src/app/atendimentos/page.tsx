@@ -382,6 +382,12 @@ export default function AtendimentosPage() {
           >
             🚗 No Pátio ({countActive})
           </button>
+          <button
+            className={`filter-chip ${activeFilter === 'ALL' ? 'active' : ''}`}
+            onClick={() => setActiveFilter('ALL')}
+          >
+            📋 Todos de Hoje ({washes.length})
+          </button>
           {STATUS_STEPS.map((s) => (
             <button
               key={s.id}

@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 
       whereClause.OR = [
         { createdAt: { gte: today } },
+        { updatedAt: { gte: today } },
         { status: { in: ['WAITING', 'IN_SERVICE', 'READY'] } },
       ];
     } else {

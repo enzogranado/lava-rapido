@@ -8,10 +8,11 @@ import {
   Plus,
   CarFront,
   Eye,
-  Trash2,
-  X,
   Car,
   MessageCircle,
+  Edit,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { formatCurrency, formatDate, whatsappLink } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -45,6 +46,18 @@ export default function ClientesPage() {
   const [vehicleColor, setVehicleColor] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit Customer & Vehicle Form State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCustomerId, setEditingCustomerId] = useState('');
+  const [editingVehicleId, setEditingVehicleId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editVehicleModel, setEditVehicleModel] = useState('');
+  const [editVehiclePlate, setEditVehiclePlate] = useState('');
+  const [editVehicleColor, setEditVehicleColor] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   const fetchCustomers = async () => {
     try {
@@ -111,6 +124,65 @@ export default function ClientesPage() {
       showToast('Erro de conexão ao cadastrar cliente', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (c: Customer) => {
+    setEditingCustomerId(c.id);
+    setEditName(c.name || '');
+    setEditPhone(c.phone || '');
+    setEditNotes(c.notes || '');
+    const firstVehicle = c.vehicles?.[0];
+    if (firstVehicle) {
+      setEditingVehicleId(firstVehicle.id);
+      setEditVehicleModel(firstVehicle.model || '');
+      setEditVehiclePlate(firstVehicle.plate || '');
+      setEditVehicleColor(firstVehicle.color || '');
+    } else {
+      setEditingVehicleId('');
+      setEditVehicleModel('');
+      setEditVehiclePlate('');
+      setEditVehicleColor('');
+    }
+    setShowEditModal(true);
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName || !editPhone) {
+      showToast('Nome e telefone são obrigatórios', 'warning');
+      return;
+    }
+
+    try {
+      setSubmittingEdit(true);
+      const res = await fetch(`/api/customers/${editingCustomerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName,
+          phone: editPhone,
+          notes: editNotes,
+          vehicleId: editingVehicleId,
+          vehicleModel: editVehicleModel,
+          vehiclePlate: editVehiclePlate,
+          vehicleColor: editVehicleColor,
+        }),
+      });
+
+      if (res.ok) {
+        showToast('Dados do cliente e veículo atualizados com sucesso!', 'success');
+        setShowEditModal(false);
+        fetchCustomers();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Erro ao atualizar cliente', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Erro ao atualizar cliente', 'error');
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -263,7 +335,15 @@ export default function ClientesPage() {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div className="table-actions">
-                      <Link href={`/clientes/${c.id}`} className="btn btn-secondary btn-sm" title="Ver Perfil">
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        title="Editar Cliente e Veículo"
+                        onClick={() => openEditModal(c)}
+                      >
+                        <Edit size={14} />
+                        Editar
+                      </button>
+                      <Link href={`/clientes/${c.id}`} className="btn btn-ghost btn-sm" title="Ver Perfil">
                         <Eye size={14} />
                         Perfil
                       </Link>
@@ -384,6 +464,115 @@ export default function ClientesPage() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? 'Cadastrando...' : 'Cadastrar Cliente & Veículo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit Customer & Vehicle Modal */}
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Editar Cliente e Veículo</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                  Altere o nome, telefone, modelo e placa do veículo cadastrado.
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateCustomer} className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Nome Completo *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Ex: João da Silva"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Telefone / WhatsApp *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Ex: (11) 99999-8888"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+                  <label className="form-label" style={{ fontWeight: 700, marginBottom: '12px', display: 'block' }}>
+                    Dados do Veículo Principal
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Modelo do Veículo</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: Honda Civic"
+                        value={editVehicleModel}
+                        onChange={(e) => setEditVehicleModel(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Placa</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: ABC-1234"
+                        value={editVehiclePlate}
+                        onChange={(e) => setEditVehiclePlate(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase' }}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Cor (Opcional)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: Preto"
+                        value={editVehicleColor}
+                        onChange={(e) => setEditVehicleColor(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observações (Opcional)</label>
+                  <textarea
+                    className="form-input"
+                    rows={2}
+                    placeholder="Observações sobre o cliente ou veículo..."
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingEdit}>
+                  {submittingEdit ? 'Salvando...' : 'Salvar Alterações'}
                 </button>
               </div>
             </form>

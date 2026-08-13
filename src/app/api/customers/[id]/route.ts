@@ -67,7 +67,7 @@ export async function GET(
   }
 }
 
-// PUT /api/customers/[id] — Update customer
+// PUT /api/customers/[id] — Update customer and optionally primary vehicle
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -75,9 +75,9 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, phone, notes } = body;
+    const { name, phone, email, notes, vehicleId, vehicleModel, vehiclePlate, vehicleColor } = body;
 
-    let cleanedPhone = phone?.replace(/\D/g, '');
+    let cleanedPhone = phone ? String(phone).replace(/\D/g, '') : undefined;
     if (cleanedPhone && cleanedPhone.length === 11) cleanedPhone = '55' + cleanedPhone;
     if (cleanedPhone && cleanedPhone.length === 10) cleanedPhone = '55' + cleanedPhone;
     if (cleanedPhone) cleanedPhone = '+' + cleanedPhone;
@@ -87,15 +87,46 @@ export async function PUT(
       data: {
         ...(name && { name }),
         ...(cleanedPhone && { phone: cleanedPhone }),
+        ...(email !== undefined && { email }),
         ...(notes !== undefined && { notes }),
       },
       include: { vehicles: true },
     });
 
-    return NextResponse.json(customer);
-  } catch (error) {
+    if (vehicleModel || vehiclePlate || vehicleColor !== undefined) {
+      const targetVehicleId = vehicleId || customer.vehicles[0]?.id;
+      if (targetVehicleId) {
+        const formattedPlate = vehiclePlate ? vehiclePlate.toUpperCase().replace(/[^A-Z0-9]/g, '') : undefined;
+        await prisma.vehicle.update({
+          where: { id: targetVehicleId },
+          data: {
+            ...(vehicleModel && { model: vehicleModel }),
+            ...(formattedPlate && { plate: formattedPlate }),
+            ...(vehicleColor !== undefined && { color: vehicleColor }),
+          },
+        });
+      } else if (vehicleModel && vehiclePlate) {
+        const formattedPlate = vehiclePlate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        await prisma.vehicle.create({
+          data: {
+            customerId: customer.id,
+            model: vehicleModel,
+            plate: formattedPlate,
+            color: vehicleColor || null,
+          },
+        });
+      }
+    }
+
+    const updatedCustomer = await prisma.customer.findUnique({
+      where: { id },
+      include: { vehicles: true },
+    });
+
+    return NextResponse.json(updatedCustomer);
+  } catch (error: any) {
     console.error('Error updating customer:', error);
-    return NextResponse.json({ error: 'Failed to update customer' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to update customer' }, { status: 500 });
   }
 }
 

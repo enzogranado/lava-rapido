@@ -14,6 +14,7 @@ import {
   Award,
   RefreshCw,
   Clock,
+  Edit,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -48,11 +49,26 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const { showToast } = useToast();
 
-  // Vehicle form
+  // Add vehicle form
   const [model, setModel] = useState('');
   const [plate, setPlate] = useState('');
   const [color, setColor] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit Customer form state
+  const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [submittingEditCustomer, setSubmittingEditCustomer] = useState(false);
+
+  // Edit Vehicle form state
+  const [showEditVehicleModal, setShowEditVehicleModal] = useState(false);
+  const [editingVehicleId, setEditingVehicleId] = useState('');
+  const [editModel, setEditModel] = useState('');
+  const [editPlate, setEditPlate] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [submittingEditVehicle, setSubmittingEditVehicle] = useState(false);
 
   const fetchCustomer = async () => {
     try {
@@ -109,6 +125,84 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
+  const openEditCustomerModal = () => {
+    if (!customer) return;
+    setEditName(customer.name || '');
+    setEditPhone(customer.phone || '');
+    setEditNotes(customer.notes || '');
+    setShowEditCustomerModal(true);
+  };
+
+  const handleUpdateCustomerDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName || !editPhone) {
+      showToast('Nome e telefone são obrigatórios', 'warning');
+      return;
+    }
+
+    try {
+      setSubmittingEditCustomer(true);
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName, phone: editPhone, notes: editNotes }),
+      });
+
+      if (res.ok) {
+        showToast('Dados do cliente atualizados com sucesso!', 'success');
+        setShowEditCustomerModal(false);
+        fetchCustomer();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Erro ao atualizar cliente', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Erro ao atualizar cliente', 'error');
+    } finally {
+      setSubmittingEditCustomer(false);
+    }
+  };
+
+  const openEditVehicleModal = (v: { id: string; model: string; plate: string; color?: string }) => {
+    setEditingVehicleId(v.id);
+    setEditModel(v.model || '');
+    setEditPlate(v.plate || '');
+    setEditColor(v.color || '');
+    setShowEditVehicleModal(true);
+  };
+
+  const handleUpdateVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModel || !editPlate) {
+      showToast('Modelo e placa são obrigatórios', 'warning');
+      return;
+    }
+
+    try {
+      setSubmittingEditVehicle(true);
+      const res = await fetch(`/api/vehicles/${editingVehicleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: editModel, plate: editPlate, color: editColor }),
+      });
+
+      if (res.ok) {
+        showToast('Veículo atualizado com sucesso!', 'success');
+        setShowEditVehicleModal(false);
+        fetchCustomer();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Erro ao atualizar veículo', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Erro ao atualizar veículo', 'error');
+    } finally {
+      setSubmittingEditVehicle(false);
+    }
+  };
+
   if (loading || !customer) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
@@ -132,9 +226,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               {customer.phone} • Cadastrado em {formatDate(customer.createdAt)}
             </p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowVehicleModal(true)}>
-            <Plus size={18} /> Adicionar Veículo
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" onClick={openEditCustomerModal}>
+              <Edit size={16} /> Editar Cliente
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowVehicleModal(true)}>
+              <Plus size={18} /> Adicionar Veículo
+            </button>
+          </div>
         </div>
       </div>
 
@@ -183,12 +282,22 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
           {customer.vehicles.map((v) => (
-            <div key={v.id} style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-              <div style={{ fontWeight: 700, fontSize: '1rem' }}>{v.model}</div>
-              <div style={{ fontFamily: 'monospace', color: 'var(--color-primary-400)', fontWeight: 700, marginTop: '4px' }}>
-                {v.plate}
+            <div key={v.id} style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{v.model}</div>
+                <div style={{ fontFamily: 'monospace', color: 'var(--color-primary-400)', fontWeight: 700, marginTop: '4px' }}>
+                  {v.plate}
+                </div>
+                {v.color && <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>Cor: {v.color}</div>}
               </div>
-              {v.color && <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>Cor: {v.color}</div>}
+              <button
+                className="btn btn-ghost btn-sm"
+                title="Editar Veículo"
+                onClick={() => openEditVehicleModal(v)}
+                style={{ padding: '4px 8px' }}
+              >
+                <Edit size={14} />
+              </button>
             </div>
           ))}
         </div>
@@ -290,6 +399,116 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? 'Salvando...' : 'Salvar Veículo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Editar Cliente */}
+      {showEditCustomerModal && (
+        <div className="modal-overlay" onClick={() => setShowEditCustomerModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Editar Dados do Cliente</h2>
+              <button className="modal-close" onClick={() => setShowEditCustomerModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateCustomerDetails}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Nome Completo *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Telefone / WhatsApp *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observações (Opcional)</label>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditCustomerModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingEditCustomer}>
+                  {submittingEditCustomer ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Editar Veículo */}
+      {showEditVehicleModal && (
+        <div className="modal-overlay" onClick={() => setShowEditVehicleModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Editar Dados do Veículo</h2>
+              <button className="modal-close" onClick={() => setShowEditVehicleModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateVehicle}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Modelo do Carro *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editModel}
+                    onChange={(e) => setEditModel(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Placa *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editPlate}
+                    onChange={(e) => setEditPlate(e.target.value.toUpperCase())}
+                    style={{ textTransform: 'uppercase' }}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Cor (Opcional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditVehicleModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingEditVehicle}>
+                  {submittingEditVehicle ? 'Salvando...' : 'Salvar Veículo'}
                 </button>
               </div>
             </form>

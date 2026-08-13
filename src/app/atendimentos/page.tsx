@@ -151,7 +151,7 @@ export default function AtendimentosPage() {
           setWhatsappTemplate(data.whatsappMessageTemplate);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const openNewWashModal = () => {
@@ -371,14 +371,9 @@ export default function AtendimentosPage() {
       });
 
       if (res.ok) {
-        const createdWash = await res.json();
         showToast('Atendimento criado com sucesso! Carro em esteira.', 'success');
         setShowModal(false);
         fetchWashes();
-
-        if (createdWash?.pickupCode && createdWash?.customer?.phone) {
-          handleSendPickupCode(createdWash);
-        }
       } else {
         const data = await res.json();
         showToast(data.error || 'Erro ao criar atendimento', 'error');
@@ -724,7 +719,7 @@ export default function AtendimentosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateWash}>
+            <form onSubmit={handleCreateWash} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body">
                 {/* Mode toggle: Existing vs Quick Registration */}
                 {!selectedCustomer && !isRegisteringQuick && (
@@ -901,7 +896,7 @@ export default function AtendimentosPage() {
                           >
                             <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }} onClick={() => toggleService(svc)}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <input type="checkbox" className="checkbox-input" checked={!!selected} onChange={() => {}} />
+                                <input type="checkbox" className="checkbox-input" checked={!!selected} onChange={() => { }} />
                                 <span style={{ fontWeight: 600 }}>{svc.name}</span>
                               </div>
                               <span style={{ fontWeight: 700, color: 'var(--color-primary-400)' }}>
@@ -1011,7 +1006,7 @@ export default function AtendimentosPage() {
             </div>
 
             <form onSubmit={handleConfirmDelivery} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
+
               {/* Summary Card */}
               <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>

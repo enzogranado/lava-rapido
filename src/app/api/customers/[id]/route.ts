@@ -19,6 +19,13 @@ export async function GET(
           },
           orderBy: { createdAt: 'desc' },
         },
+        mensalistas: {
+          include: {
+            plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
+            vehicle: { select: { id: true, model: true, plate: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 

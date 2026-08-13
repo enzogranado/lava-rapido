@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   LogOut,
   History,
+  Repeat,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -31,6 +32,7 @@ const navItems = [
   { label: 'Clientes & Veículos', href: '/clientes', icon: Users },
   { label: 'Serviços', href: '/servicos', icon: Wrench },
   { label: 'Financeiro', href: '/financeiro', icon: DollarSign, section: 'Gestão' },
+  { label: 'Mensalistas', href: '/mensalistas', icon: Repeat },
   { label: 'Relatórios', href: '/relatorios', icon: BarChart3 },
   { label: 'WhatsApp', href: '/whatsapp', icon: MessageCircle, section: 'Comunicação' },
   { label: 'Configurações', href: '/configuracoes', icon: Settings, section: 'Sistema' },

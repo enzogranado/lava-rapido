@@ -35,6 +35,11 @@ export async function GET(request: NextRequest) {
           include: { items: true },
           orderBy: { createdAt: 'desc' },
         },
+        mensalistas: {
+          where: { tenantId, status: 'ATIVO' },
+          take: 1,
+          include: { plan: { select: { id: true, name: true, price: true, washesIncluded: true } } },
+        },
       },
       orderBy: sortBy === 'name' ? { name: sortOrder as 'asc' | 'desc' } : { createdAt: 'desc' },
     });
@@ -55,6 +60,7 @@ export async function GET(request: NextRequest) {
         totalSpent,
         lastVisit,
         totalVisits,
+        mensalista: customer.mensalistas[0] || null,
       };
     });
 

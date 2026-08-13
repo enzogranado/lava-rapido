@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         inactiveDaysLimit: tenant.inactiveDaysLimit,
         whatsappMessageTemplate: tenant.whatsappMessageTemplate,
         whatsappRecallTemplate: tenant.whatsappRecallTemplate,
+        whatsappTrackingTemplate: tenant.whatsappTrackingTemplate,
         pendingPinChange: tenant.pendingPinChange,
         pinChangeStatus: tenant.pinChangeStatus,
       });
@@ -46,7 +47,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { businessName, inactiveDaysLimit, whatsappMessageTemplate, whatsappRecallTemplate } = body;
+    const { businessName, inactiveDaysLimit, whatsappMessageTemplate, whatsappRecallTemplate, whatsappTrackingTemplate } = body;
 
     const parsedInactiveDays = inactiveDaysLimit !== undefined ? Number.parseInt(String(inactiveDaysLimit), 10) : undefined;
     const safeInactiveDays = (parsedInactiveDays !== undefined && !Number.isNaN(parsedInactiveDays)) ? parsedInactiveDays : undefined;
@@ -56,6 +57,7 @@ export async function PUT(request: NextRequest) {
     if (safeInactiveDays !== undefined) updateTenantData.inactiveDaysLimit = safeInactiveDays;
     if (whatsappMessageTemplate !== undefined && whatsappMessageTemplate !== null) updateTenantData.whatsappMessageTemplate = String(whatsappMessageTemplate);
     if (whatsappRecallTemplate !== undefined && whatsappRecallTemplate !== null) updateTenantData.whatsappRecallTemplate = String(whatsappRecallTemplate);
+    if (whatsappTrackingTemplate !== undefined && whatsappTrackingTemplate !== null) updateTenantData.whatsappTrackingTemplate = String(whatsappTrackingTemplate);
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
@@ -73,6 +75,12 @@ export async function PUT(request: NextRequest) {
             where: { id: tenantId },
             data: updateTenantData,
           });
+        } else if (err?.message?.includes('whatsappTrackingTemplate') && updateTenantData.whatsappTrackingTemplate) {
+          delete updateTenantData.whatsappTrackingTemplate;
+          updatedTenant = await prisma.tenant.update({
+            where: { id: tenantId },
+            data: updateTenantData,
+          });
         } else {
           throw err;
         }
@@ -84,6 +92,7 @@ export async function PUT(request: NextRequest) {
         inactiveDaysLimit: updatedTenant.inactiveDaysLimit,
         whatsappMessageTemplate: updatedTenant.whatsappMessageTemplate,
         whatsappRecallTemplate: updatedTenant.whatsappRecallTemplate || whatsappRecallTemplate,
+        whatsappTrackingTemplate: updatedTenant.whatsappTrackingTemplate || whatsappTrackingTemplate,
       });
     }
 

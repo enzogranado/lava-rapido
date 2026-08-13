@@ -23,8 +23,9 @@ import {
   CreditCard,
   Banknote,
   Zap,
+  Repeat,
 } from 'lucide-react';
-import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, buildReadyMessage, buildEntryCodeMessage, openWhatsAppDirect, PAYMENT_METHOD_LABELS } from '@/lib/utils';
+import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, STATUS_STEPS, buildReadyMessage, buildEntryCodeMessage, buildTrackingMessage, openWhatsAppDirect, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface Service {
@@ -38,6 +39,7 @@ interface Customer {
   name: string;
   phone: string;
   vehicles: Array<{ id: string; model: string; plate: string }>;
+  mensalista?: { id: string; plan: { name: string; price: number } } | null;
 }
 
 interface WashItem {
@@ -67,12 +69,20 @@ interface Wash {
   items: WashItem[];
 }
 
-const STATUS_STEPS = [
-  { id: 'WAITING', label: '1. Aguardando', shortLabel: 'Aguardando', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
-  { id: 'IN_SERVICE', label: '2. Em Serviço', shortLabel: 'Em Serviço', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
-  { id: 'READY', label: '3. Pronto', shortLabel: 'Pronto', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' },
-  { id: 'DELIVERED', label: '4. Entregue', shortLabel: 'Entregue', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
-];
+// Generated client-side (Web Crypto), before the wash-creation request, so WhatsApp can be
+// opened synchronously inside the submit click — waiting for the server response first would
+// risk the browser treating the popup as unsolicited and blocking it. Same charset as the
+// server-side fallback generator in /api/washes, avoiding visually-ambiguous characters.
+const TRACKING_TOKEN_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+function generateTrackingToken(length = 8): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let token = '';
+  for (let i = 0; i < length; i++) {
+    token += TRACKING_TOKEN_CHARS[bytes[i] % TRACKING_TOKEN_CHARS.length];
+  }
+  return token;
+}
 
 export default function AtendimentosPage() {
   const [washes, setWashes] = useState<Wash[]>([]);
@@ -141,6 +151,7 @@ export default function AtendimentosPage() {
   };
 
   const [whatsappTemplate, setWhatsappTemplate] = useState<string>('');
+  const [whatsappTrackingTemplate, setWhatsappTrackingTemplate] = useState<string>('');
 
   useEffect(() => {
     fetchWashes();
@@ -149,6 +160,9 @@ export default function AtendimentosPage() {
       .then((data) => {
         if (data?.whatsappMessageTemplate) {
           setWhatsappTemplate(data.whatsappMessageTemplate);
+        }
+        if (data?.whatsappTrackingTemplate) {
+          setWhatsappTrackingTemplate(data.whatsappTrackingTemplate);
         }
       })
       .catch(() => { });
@@ -255,7 +269,7 @@ export default function AtendimentosPage() {
     fetch('/api/whatsapp/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ washId: wash.id }),
+      body: JSON.stringify({ washId: wash.id, type: 'ENTRY_CODE' }),
     }).catch((err) => console.error('Error logging WhatsApp message send:', err));
   };
 
@@ -276,7 +290,7 @@ export default function AtendimentosPage() {
     fetch('/api/whatsapp/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ washId: wash.id }),
+      body: JSON.stringify({ washId: wash.id, type: 'READY' }),
     }).catch((err) => console.error('Error logging WhatsApp message send:', err));
   };
 
@@ -356,6 +370,25 @@ export default function AtendimentosPage() {
       return;
     }
 
+    const vehicle = selectedCustomer.vehicles.find((v) => v.id === selectedVehicleId);
+
+    // Fire off the first WhatsApp message (tracking link) synchronously, before the await below —
+    // this keeps it inside the same user gesture as the submit click so the browser doesn't
+    // treat the WhatsApp pop-up as unsolicited and block it.
+    const trackingToken = generateTrackingToken();
+    if (vehicle) {
+      const trackingUrl = `${window.location.origin}/acompanhar/${trackingToken}`;
+      const trackingMessage = buildTrackingMessage(
+        whatsappTrackingTemplate,
+        selectedCustomer.name,
+        vehicle.model,
+        vehicle.plate,
+        trackingUrl
+      );
+      openWhatsAppDirect(selectedCustomer.phone, trackingMessage);
+      showToast('Abrindo WhatsApp para enviar o link de acompanhamento...', 'success');
+    }
+
     try {
       setSubmitting(true);
       const res = await fetch('/api/washes', {
@@ -367,13 +400,22 @@ export default function AtendimentosPage() {
           items: selectedServices,
           discount,
           notes,
+          trackingToken,
         }),
       });
 
       if (res.ok) {
+        const wash = await res.json();
         showToast('Atendimento criado com sucesso! Carro em esteira.', 'success');
         setShowModal(false);
         fetchWashes();
+
+        // Fire-and-forget: log the tracking message (and attempt a real Meta API send if configured)
+        fetch('/api/whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ washId: wash.id, type: 'TRACKING' }),
+        }).catch((err) => console.error('Error logging WhatsApp tracking message send:', err));
       } else {
         const data = await res.json();
         showToast(data.error || 'Erro ao criar atendimento', 'error');
@@ -848,6 +890,28 @@ export default function AtendimentosPage() {
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedCustomer(null)}>
                       Trocar Cliente
                     </button>
+                  </div>
+                )}
+
+                {/* Informational badge — this customer has an active monthly subscription */}
+                {selectedCustomer?.mensalista && (
+                  <div
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.1)',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '0.8125rem',
+                      color: '#38bdf8',
+                    }}
+                  >
+                    <Repeat size={16} />
+                    <span>
+                      <strong>Cliente Mensalista</strong> — Plano {selectedCustomer.mensalista.plan.name} ({formatCurrency(selectedCustomer.mensalista.plan.price)}/mês). A cobrança desta lavagem segue normal, ajuste o valor abaixo se estiver incluída no plano.
+                    </span>
                   </div>
                 )}
 

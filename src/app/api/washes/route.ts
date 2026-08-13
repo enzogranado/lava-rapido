@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { getTenantIdOrFallback } from '@/lib/auth';
+
+// Avoids visually-ambiguous characters (0/O, 1/l/I) since this may occasionally be read out loud or typed manually.
+const TRACKING_TOKEN_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+
+function generateTrackingToken(length = 8): string {
+  const bytes = crypto.randomBytes(length);
+  let token = '';
+  for (let i = 0; i < length; i++) {
+    token += TRACKING_TOKEN_CHARS[bytes[i] % TRACKING_TOKEN_CHARS.length];
+  }
+  return token;
+}
 
 // GET /api/washes — List washes with status filtering and relations scoped to tenant
 export async function GET(request: NextRequest) {
@@ -75,7 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     const body = await request.json();
-    const { customerId, vehicleId, items, discount = 0, notes } = body;
+    const { customerId, vehicleId, items, discount = 0, notes, trackingToken } = body;
 
     if (!customerId || !vehicleId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -110,6 +123,17 @@ export async function POST(request: NextRequest) {
     const total = Math.max(0, subtotal - numericDiscount);
     const pickupCode = Math.floor(1000 + Math.random() * 9000).toString();
 
+    // The client generates this up front (before the create request) so it can open WhatsApp
+    // with the tracking link synchronously, inside the same user gesture as the submit click —
+    // waiting for this response first would risk the browser blocking the popup. We just need
+    // to make sure whatever we end up storing is actually unique.
+    let finalTrackingToken: string = typeof trackingToken === 'string' && trackingToken.trim() ? trackingToken.trim() : generateTrackingToken();
+    for (let attempts = 0; attempts < 3; attempts++) {
+      const collision = await prisma.wash.findUnique({ where: { trackingToken: finalTrackingToken } });
+      if (!collision) break;
+      finalTrackingToken = generateTrackingToken();
+    }
+
     const wash = await prisma.wash.create({
       data: {
         tenantId,
@@ -121,6 +145,7 @@ export async function POST(request: NextRequest) {
         total,
         notes,
         pickupCode,
+        trackingToken: finalTrackingToken,
         startedAt: new Date(),
         items: {
           create: processedItems,

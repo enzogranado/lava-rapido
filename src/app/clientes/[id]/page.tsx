@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Clock,
   Edit,
+  Repeat,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -39,6 +40,15 @@ interface CustomerDetail {
     total: number;
     vehicle: { model: string; plate: string };
     items: Array<{ id: string; serviceNameSnapshot: string; unitPrice: number }>;
+  }>;
+  mensalistas: Array<{
+    id: string;
+    status: string;
+    dueDay: number;
+    lastPaymentDate: string | null;
+    paymentMethod?: string | null;
+    plan: { name: string; price: number; washesIncluded: number | null };
+    vehicle: { model: string; plate: string } | null;
   }>;
 }
 
@@ -273,6 +283,53 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           <div className="stat-card-label">Frequência Média de Visita</div>
         </div>
       </div>
+
+      {/* Assinatura Mensalista */}
+      {(() => {
+        const activeMensalista = customer.mensalistas?.find((m) => m.status === 'ATIVO');
+        return (
+          <div className="card" style={activeMensalista ? { borderLeft: '4px solid var(--color-primary-400)' } : undefined}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Repeat size={20} color="var(--color-primary-400)" />
+                Assinatura Mensalista
+              </h3>
+              <Link href="/mensalistas" className="btn btn-secondary btn-sm">
+                Gerenciar em Mensalistas
+              </Link>
+            </div>
+
+            {activeMensalista ? (
+              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Plano</div>
+                  <div style={{ fontWeight: 700 }}>{activeMensalista.plan.name} — {formatCurrency(activeMensalista.plan.price)}/mês</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Veículo Coberto</div>
+                  <div style={{ fontWeight: 700 }}>
+                    {activeMensalista.vehicle ? `${activeMensalista.vehicle.model} (${activeMensalista.vehicle.plate})` : 'Não especificado'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Vencimento</div>
+                  <div style={{ fontWeight: 700 }}>Todo dia {activeMensalista.dueDay}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Último Pagamento</div>
+                  <div style={{ fontWeight: 700 }}>
+                    {activeMensalista.lastPaymentDate ? formatDate(activeMensalista.lastPaymentDate) : 'Ainda não registrado'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginTop: '8px' }}>
+                Este cliente não é mensalista no momento.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Vehicles List */}
       <div className="card">

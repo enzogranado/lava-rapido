@@ -9,6 +9,7 @@ export default function ConfiguracoesPage() {
   const [inactiveDaysLimit, setInactiveDaysLimit] = useState(45);
   const [whatsappTemplate, setWhatsappTemplate] = useState('');
   const [whatsappRecallTemplate, setWhatsappRecallTemplate] = useState('');
+  const [whatsappTrackingTemplate, setWhatsappTrackingTemplate] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
@@ -28,6 +29,10 @@ export default function ConfiguracoesPage() {
         setWhatsappRecallTemplate(
           data.whatsappRecallTemplate ||
             'Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿'
+        );
+        setWhatsappTrackingTemplate(
+          data.whatsappTrackingTemplate ||
+            'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — acabou de entrar na nossa lavagem!\n\nAcompanhe o status em tempo real por aqui:\n{link}\n\nVamos te avisando a cada etapa! 🚿'
         );
       }
     } catch (err) {
@@ -54,6 +59,7 @@ export default function ConfiguracoesPage() {
           inactiveDaysLimit,
           whatsappMessageTemplate: whatsappTemplate,
           whatsappRecallTemplate,
+          whatsappTrackingTemplate,
         }),
       });
 
@@ -145,6 +151,27 @@ export default function ConfiguracoesPage() {
             />
             <span className="form-hint">
               Campos automáticos substituídos: <code>{'{nome}'}</code>, <code>{'{modelo}'}</code>, <code>{'{placa}'}</code>
+            </span>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MessageCircle size={20} color="#38bdf8" />
+            Template da Mensagem de Acompanhamento (Carro Entrou na Lavagem)
+          </h3>
+
+          <div className="form-group">
+            <label className="form-label">Mensagem Enviada ao Colocar o Carro na Lavagem</label>
+            <textarea
+              className="form-input form-textarea"
+              style={{ minHeight: '120px' }}
+              value={whatsappTrackingTemplate}
+              onChange={(e) => setWhatsappTrackingTemplate(e.target.value)}
+              required
+            />
+            <span className="form-hint">
+              Campos automáticos substituídos: <code>{'{nome}'}</code>, <code>{'{modelo}'}</code>, <code>{'{placa}'}</code>, <code>{'{link}'}</code> (link de acompanhamento do serviço)
             </span>
           </div>
         </div>

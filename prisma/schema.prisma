@@ -10,25 +10,26 @@ datasource db {
 }
 
 model Tenant {
-  id                      String   @id @default(cuid())
-  name                    String
-  slug                    String   @unique
-  phone                   String?
-  email                   String?
-  active                  Boolean  @default(false)
-  status                  String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  paymentStatus           String   @default("PENDING") // PAID, PENDING, OVERDUE
-  monthlyFee              Float    @default(99.00)
-  lastPaymentDate         DateTime?
-  dashboardPin            String   @default("1234")
-  pendingPinChange        String?
-  pinChangeReason         String?
-  pinChangeStatus         String?  // null, PENDING, APPROVED, REJECTED
-  inactiveDaysLimit       Int      @default(45)
-  whatsappMessageTemplate String   @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
-  whatsappRecallTemplate  String   @default("Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿")
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  id                       String    @id @default(cuid())
+  name                     String
+  slug                     String    @unique
+  phone                    String?
+  email                    String?
+  active                   Boolean   @default(false)
+  status                   String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  paymentStatus            String    @default("PENDING") // PAID, PENDING, OVERDUE
+  monthlyFee               Float     @default(99.00)
+  lastPaymentDate          DateTime?
+  dashboardPin             String    @default("1234")
+  pendingPinChange         String?
+  pinChangeReason          String?
+  pinChangeStatus          String? // null, PENDING, APPROVED, REJECTED
+  inactiveDaysLimit        Int       @default(45)
+  whatsappMessageTemplate  String    @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿")
+  whatsappRecallTemplate   String    @default("Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿")
+  whatsappTrackingTemplate String    @default("Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — acabou de entrar na nossa lavagem!\n\nAcompanhe o status em tempo real por aqui:\n{link}\n\nVamos te avisando a cada etapa! 🚿")
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   users            User[]
   customers        Customer[]
@@ -36,6 +37,8 @@ model Tenant {
   services         Service[]
   washes           Wash[]
   whatsappMessages WhatsAppMessage[]
+  monthlyPlans     MonthlyPlan[]
+  mensalistas      Mensalista[]
 }
 
 model User {
@@ -67,6 +70,7 @@ model Customer {
   vehicles         Vehicle[]
   washes           Wash[]
   whatsappMessages WhatsAppMessage[]
+  mensalistas      Mensalista[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
@@ -85,9 +89,10 @@ model Vehicle {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  washes   Wash[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  washes      Wash[]
+  mensalistas Mensalista[]
 
   @@unique([tenantId, plate])
   @@index([tenantId])
@@ -113,23 +118,24 @@ model Service {
 }
 
 model Wash {
-  id          String    @id @default(cuid())
-  tenantId    String    @default("tenant-default")
-  customerId  String
-  vehicleId   String
-  status      String    @default("WAITING") // WAITING, IN_SERVICE, READY, DELIVERED, CANCELLED
-  subtotal    Float     @default(0)
-  discount    Float     @default(0)
-  total       Float     @default(0)
-  notes               String?
-  pickupCode          String?
-  paymentMethod       String?   // MONEY, PIX, DEBIT, CREDIT
-  pickupCodeBypassed  Boolean   @default(false)
-  startedAt           DateTime?
-  completedAt         DateTime?
-  deliveredAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  tenantId           String    @default("tenant-default")
+  customerId         String
+  vehicleId          String
+  status             String    @default("WAITING") // WAITING, IN_SERVICE, READY, DELIVERED, CANCELLED
+  subtotal           Float     @default(0)
+  discount           Float     @default(0)
+  total              Float     @default(0)
+  notes              String?
+  pickupCode         String?
+  trackingToken      String?   @unique
+  paymentMethod      String? // MONEY, PIX, DEBIT, CREDIT
+  pickupCodeBypassed Boolean   @default(false)
+  startedAt          DateTime?
+  completedAt        DateTime?
+  deliveredAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer         Customer          @relation(fields: [customerId], references: [id])
@@ -167,6 +173,7 @@ model WhatsAppMessage {
   washId            String?
   phone             String
   message           String
+  type              String    @default("READY") // READY, ENTRY_CODE, TRACKING, RECALL
   status            String    @default("PENDING") // PENDING, SENT, DELIVERED, READ, FAILED
   externalMessageId String?
   error             String?
@@ -192,4 +199,46 @@ model Settings {
   whatsappRecallTemplate  String   @default("Olá, {nome}! 🚗✨\n\nSentimos sua falta aqui no lava-rápido! Notamos que faz {dias} dias que seu veículo não faz uma higienização.\n\nQue tal agendar uma lavagem hoje? 🚿")
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+model MonthlyPlan {
+  id             String   @id @default(cuid())
+  tenantId       String   @default("tenant-default")
+  name           String
+  price          Float
+  washesIncluded Int? // null = ilimitado
+  description    String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mensalistas Mensalista[]
+
+  @@index([tenantId])
+}
+
+model Mensalista {
+  id              String    @id @default(cuid())
+  tenantId        String    @default("tenant-default")
+  customerId      String
+  vehicleId       String?
+  planId          String
+  status          String    @default("ATIVO") // ATIVO, CANCELADO, INATIVO
+  paymentMethod   String? // MONEY, PIX, DEBIT, CREDIT
+  dueDay          Int // 1-28
+  lastPaymentDate DateTime?
+  startedAt       DateTime  @default(now())
+  cancelledAt     DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer    @relation(fields: [customerId], references: [id])
+  vehicle  Vehicle?    @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  plan     MonthlyPlan @relation(fields: [planId], references: [id])
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, status])
 }

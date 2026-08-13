@@ -13,6 +13,7 @@ import {
   Edit,
   Trash2,
   X,
+  Repeat,
 } from 'lucide-react';
 import { formatCurrency, formatDate, whatsappLink } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
@@ -27,6 +28,7 @@ interface Customer {
   totalSpent: number;
   lastVisit: string | null;
   totalVisits: number;
+  mensalista: { id: string; plan: { name: string; price: number } } | null;
 }
 
 export default function ClientesPage() {
@@ -35,6 +37,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'lastVisit' | 'totalSpent'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [onlyMensalistas, setOnlyMensalistas] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const { showToast } = useToast();
 
@@ -77,6 +80,8 @@ export default function ClientesPage() {
   useEffect(() => {
     fetchCustomers();
   }, [search, sortBy, sortOrder]);
+
+  const visibleCustomers = onlyMensalistas ? customers.filter((c) => c.mensalista) : customers;
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +262,14 @@ export default function ClientesPage() {
           >
             Maior Valor Gasto {sortBy === 'totalSpent' && (sortOrder === 'asc' ? '↑' : '↓')}
           </button>
+          <button
+            className={`filter-chip ${onlyMensalistas ? 'active' : ''}`}
+            onClick={() => setOnlyMensalistas((v) => !v)}
+            style={{ marginLeft: '8px' }}
+          >
+            <Repeat size={13} style={{ marginRight: '4px' }} />
+            Somente Mensalistas
+          </button>
         </div>
       </div>
 
@@ -265,13 +278,19 @@ export default function ClientesPage() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
           <div className="loading-spinner" />
         </div>
-      ) : customers.length === 0 ? (
+      ) : visibleCustomers.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <Users size={36} />
           </div>
-          <div className="empty-state-title">Nenhum cliente encontrado</div>
-          <div className="empty-state-description">Cadastre seus clientes com o veículo para iniciar os atendimentos.</div>
+          <div className="empty-state-title">
+            {onlyMensalistas ? 'Nenhum cliente mensalista encontrado' : 'Nenhum cliente encontrado'}
+          </div>
+          <div className="empty-state-description">
+            {onlyMensalistas
+              ? 'Cadastre assinaturas em Mensalistas para que apareçam aqui.'
+              : 'Cadastre seus clientes com o veículo para iniciar os atendimentos.'}
+          </div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             <Plus size={18} /> Novo Cliente
           </button>
@@ -291,12 +310,21 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {visibleCustomers.map((c) => (
                 <tr key={c.id}>
                   <td>
                     <Link href={`/clientes/${c.id}`} style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       {c.name}
                     </Link>
+                    {c.mensalista && (
+                      <span
+                        className="badge badge-info"
+                        style={{ marginLeft: '8px', fontSize: '0.6875rem' }}
+                        title={`Mensalista — ${c.mensalista.plan.name}`}
+                      >
+                        <Repeat size={11} /> Mensalista
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

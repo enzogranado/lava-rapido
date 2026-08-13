@@ -2,13 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COOKIE_NAME, parseSessionToken } from '@/lib/session';
 
+// Redirected away from if already authenticated (login/register screens don't make sense mid-session)
 const PUBLIC_PAGES = ['/login', '/cadastro', '/landing'];
+// Public regardless of auth state — a logged-in staff member previewing the customer link
+// must still see the tracking page, not get bounced to the dashboard
+const PUBLIC_PAGES_ALWAYS = ['/acompanhar'];
 const PUBLIC_API_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/logout',
   '/api/auth/me',
 ];
+// Prefix-matched public API routes (dynamic segments, e.g. the customer-facing tracking link)
+const PUBLIC_API_PREFIXES = ['/api/public/'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -28,7 +34,10 @@ export function middleware(request: NextRequest) {
   const isAuthenticated = !!session;
 
   const isPublicPage = PUBLIC_PAGES.some((page) => pathname === page || pathname.startsWith(page + '/'));
-  const isPublicApi = PUBLIC_API_ROUTES.some((route) => pathname === route);
+  const isPublicPageAlways = PUBLIC_PAGES_ALWAYS.some((page) => pathname === page || pathname.startsWith(page + '/'));
+  const isPublicApi =
+    PUBLIC_API_ROUTES.some((route) => pathname === route) ||
+    PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   // API Routes Security
   if (pathname.startsWith('/api/')) {
@@ -41,6 +50,11 @@ export function middleware(request: NextRequest) {
         { status: 401 }
       );
     }
+    return NextResponse.next();
+  }
+
+  // Always-public pages (e.g. customer tracking link) — never redirected, regardless of auth state
+  if (isPublicPageAlways) {
     return NextResponse.next();
   }
 

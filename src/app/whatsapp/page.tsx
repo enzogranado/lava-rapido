@@ -9,12 +9,20 @@ interface WhatsAppLog {
   id: string;
   phone: string;
   message: string;
+  type: string;
   status: string;
   error?: string;
   createdAt: string;
   customer: { name: string; phone: string };
   wash?: { vehicle: { model: string; plate: string } };
 }
+
+const TYPE_LABELS: Record<string, { label: string; badgeClass: string }> = {
+  READY: { label: 'Carro Pronto', badgeClass: 'badge-success' },
+  ENTRY_CODE: { label: 'Código de Retirada', badgeClass: 'badge-warning' },
+  TRACKING: { label: 'Acompanhamento', badgeClass: 'badge-info' },
+  RECALL: { label: 'Reativação', badgeClass: 'badge-purple' },
+};
 
 export default function WhatsappPage() {
   const [messages, setMessages] = useState<WhatsAppLog[]>([]);
@@ -74,6 +82,7 @@ export default function WhatsappPage() {
                 <th>Telefone</th>
                 <th>Veículo</th>
                 <th>Mensagem</th>
+                <th>Tipo</th>
                 <th style={{ textAlign: 'right' }}>Status</th>
               </tr>
             </thead>
@@ -88,6 +97,11 @@ export default function WhatsappPage() {
                   <td>{m.wash ? `${m.wash.vehicle.model} (${m.wash.vehicle.plate})` : '-'}</td>
                   <td style={{ maxWidth: '300px', fontSize: '0.8125rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.message}
+                  </td>
+                  <td>
+                    <span className={`badge ${TYPE_LABELS[m.type]?.badgeClass || 'badge-neutral'}`}>
+                      {TYPE_LABELS[m.type]?.label || m.type}
+                    </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     {m.status === 'DELIVERED' || m.status === 'SENT' ? (

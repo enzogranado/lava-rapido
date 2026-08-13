@@ -1,13 +1,19 @@
 import prisma from '@/lib/prisma';
+import { buildReadyMessage, buildEntryCodeMessage, buildTrackingMessage } from '@/lib/utils';
+
+export type WhatsAppMessageType = 'READY' | 'ENTRY_CODE' | 'TRACKING';
 
 export const whatsappService = {
-  async sendReadyNotification(washId: string) {
+  // Builds the message text and sends/logs it. `type` decides which template is used —
+  // READY and TRACKING are tenant-configurable (Configurações), ENTRY_CODE is fixed, matching
+  // how buildReadyMessage/buildEntryCodeMessage already work on the client side.
+  async sendMessage(washId: string, type: WhatsAppMessageType, extra?: { origin?: string }) {
     const wash = await prisma.wash.findUnique({
       where: { id: washId },
       include: {
         customer: true,
         vehicle: true,
-        whatsappMessages: true,
+        tenant: true,
       },
     });
 
@@ -15,17 +21,25 @@ export const whatsappService = {
       throw new Error('Atendimento não encontrado');
     }
 
-    const { customer, vehicle } = wash;
+    const { customer, vehicle, tenant } = wash;
 
-    // Retrieve system settings for template
-    const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
-    const template = settings?.whatsappMessageTemplate || 
-      'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿';
-
-    const messageText = template
-      .replace('{nome}', customer.name)
-      .replace('{modelo}', vehicle.model)
-      .replace('{placa}', vehicle.plate);
+    let messageText: string;
+    if (type === 'ENTRY_CODE') {
+      messageText = buildEntryCodeMessage(customer.name, vehicle.model, vehicle.plate, wash.pickupCode);
+    } else if (type === 'TRACKING') {
+      const origin = extra?.origin || '';
+      const trackingUrl = wash.trackingToken ? `${origin}/acompanhar/${wash.trackingToken}` : origin;
+      messageText = buildTrackingMessage(tenant?.whatsappTrackingTemplate, customer.name, vehicle.model, vehicle.plate, trackingUrl);
+    } else {
+      // READY — tenant.whatsappMessageTemplate is the source of truth (matches /api/settings);
+      // the legacy single-tenant Settings row is only a fallback for the rare wash whose tenant record is missing.
+      let template: string | undefined = tenant?.whatsappMessageTemplate;
+      if (!template) {
+        const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
+        template = settings?.whatsappMessageTemplate;
+      }
+      messageText = buildReadyMessage(template, customer.name, vehicle.model, vehicle.plate, wash.pickupCode);
+    }
 
     // Meta WhatsApp Cloud API credentials
     const token = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -33,8 +47,8 @@ export const whatsappService = {
 
     const cleanedPhone = customer.phone.replace(/\D/g, '');
     let status = 'SENT';
-    let externalMessageId = null;
-    let errorMsg = null;
+    let externalMessageId: string | null = null;
+    let errorMsg: string | null = null;
     let isWebFallback = false;
 
     if (token && phoneId) {
@@ -81,6 +95,7 @@ export const whatsappService = {
         washId: wash.id,
         phone: customer.phone,
         message: messageText,
+        type,
         status,
         externalMessageId,
         error: errorMsg,

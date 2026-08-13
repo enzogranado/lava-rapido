@@ -16,6 +16,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/veiculos': { title: 'Veículos', subtitle: 'Veículos cadastrados' },
   '/servicos': { title: 'Serviços', subtitle: 'Configure seus serviços e preços' },
   '/financeiro': { title: 'Financeiro', subtitle: 'Controle de receita e caixa' },
+  '/mensalistas': { title: 'Mensalistas', subtitle: 'Clientes com plano mensal recorrente' },
   '/relatorios': { title: 'Relatórios', subtitle: 'Análises e métricas do negócio' },
   '/whatsapp': { title: 'WhatsApp', subtitle: 'Histórico de mensagens enviadas' },
   '/configuracoes': { title: 'Configurações', subtitle: 'Configurações do sistema' },

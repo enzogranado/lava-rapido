@@ -122,6 +122,23 @@ export const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'var(--color-danger)',
 };
 
+// Ordered wash pipeline steps — single source of truth shared by the internal Atendimentos
+// board and the public tracking page, so both always agree on labels/colors/order.
+export interface StatusStep {
+  id: string;
+  label: string;
+  shortLabel: string;
+  color: string;
+  bg: string;
+}
+
+export const STATUS_STEPS: StatusStep[] = [
+  { id: 'WAITING', label: '1. Aguardando', shortLabel: 'Aguardando', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  { id: 'IN_SERVICE', label: '2. Em Serviço', shortLabel: 'Em Serviço', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  { id: 'READY', label: '3. Pronto', shortLabel: 'Pronto', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' },
+  { id: 'DELIVERED', label: '4. Entregue', shortLabel: 'Entregue', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
+];
+
 // Debounce helper
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
@@ -187,6 +204,24 @@ export function buildEntryCodeMessage(
   pickupCode?: string | null
 ): string {
   return `Olá, ${customerName}!\n\nConfirmamos a entrada do seu veículo *${vehicleModel}* (Placa: *${vehiclePlate}*) na lavagem.\n\n*Código de segurança para retirada: ${pickupCode || '----'}*\n\nApresente este código no balcão ao vir retirar o veículo. Agradecemos a preferência!`;
+}
+
+// Build the first-contact message sent when a car enters the wash, with the tracking link
+export function buildTrackingMessage(
+  template: string | null | undefined,
+  customerName: string,
+  vehicleModel: string,
+  vehiclePlate: string,
+  trackingUrl: string
+): string {
+  const defaultTemplate =
+    'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — acabou de entrar na nossa lavagem!\n\nAcompanhe o status em tempo real por aqui:\n{link}\n\nVamos te avisando a cada etapa! 🚿';
+  const tpl = template || defaultTemplate;
+  return tpl
+    .replace(/{nome}/g, customerName)
+    .replace(/{modelo}/g, vehicleModel)
+    .replace(/{placa}/g, vehiclePlate)
+    .replace(/{link}/g, trackingUrl);
 }
 
 // Open WhatsApp directly without async delay

@@ -92,21 +92,14 @@ export default function DashboardPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    // Check if unlocked in session storage or if user is SUPER_ADMIN
-    const unlocked = sessionStorage.getItem('dashboard_unlocked') === 'true';
-    if (unlocked) {
-      setIsUnlocked(true);
-    } else {
-      fetch('/api/auth/me')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.user?.role === 'SUPER_ADMIN') {
-            setIsUnlocked(true);
-            sessionStorage.setItem('dashboard_unlocked', 'true');
-          }
-        })
-        .catch(() => {});
-    }
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.role === 'SUPER_ADMIN') {
+          setIsUnlocked(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleUnlockPin = async (e: React.FormEvent) => {
@@ -128,7 +121,6 @@ export default function DashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setIsUnlocked(true);
-        sessionStorage.setItem('dashboard_unlocked', 'true');
         showToast('Dashboard desbloqueado com sucesso!', 'success');
       } else {
         setPinError(data.error || 'PIN incorreto. Acesso negado.');

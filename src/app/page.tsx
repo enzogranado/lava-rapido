@@ -472,13 +472,13 @@ export default function DashboardPage() {
                 className={`filter-chip ${chartMetric === 'revenue' ? 'active' : ''}`}
                 onClick={() => setChartMetric('revenue')}
               >
-                💵 Fluxo (R$)
+                 Fluxo (R$)
               </button>
               <button
                 className={`filter-chip ${chartMetric === 'count' ? 'active' : ''}`}
                 onClick={() => setChartMetric('count')}
               >
-                🚗 Atendimentos
+                 Atendimentos
               </button>
             </div>
 

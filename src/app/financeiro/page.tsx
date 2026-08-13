@@ -46,7 +46,7 @@ export default function FinanceiroPage() {
   const [verifyingPin, setVerifyingPin] = useState(false);
   const [pinError, setPinError] = useState('');
 
-  const [range, setRange] = useState<'7d' | '30d' | '3m' | '6m' | '1y'>('30d');
+  const [range, setRange] = useState<'1d' | '7d' | '30d' | '3m' | '6m' | '1y'>('30d');
   const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState<{
     chartData: Array<{ date: string; revenue: number; count: number; ticketMedio: number }>;
@@ -271,13 +271,13 @@ export default function FinanceiroPage() {
           <p className="page-subtitle">Acompanhe as entradas do caixa, evolução do ticket médio e ranking de serviços</p>
         </div>
         <div className="filter-chips">
-          {(['7d', '30d', '3m', '6m', '1y'] as const).map((r) => (
+          {(['1d', '7d', '30d', '3m', '6m', '1y'] as const).map((r) => (
             <button
               key={r}
               className={`filter-chip ${range === r ? 'active' : ''}`}
               onClick={() => setRange(r)}
             >
-              {r === '7d' ? '7 dias' : r === '30d' ? '30 dias' : r === '3m' ? '3 meses' : r === '6m' ? '6 meses' : '1 ano'}
+              {r === '1d' ? 'Hoje' : r === '7d' ? '7 dias' : r === '30d' ? '30 dias' : r === '3m' ? '3 meses' : r === '6m' ? '6 meses' : '1 ano'}
             </button>
           ))}
         </div>

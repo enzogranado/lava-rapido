@@ -10,8 +10,11 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
     let startDate = new Date();
+    const isDaily = range === '1d' || range === 'today';
 
-    if (range === '7d') startDate.setDate(now.getDate() - 7);
+    if (isDaily) {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    } else if (range === '7d') startDate.setDate(now.getDate() - 7);
     else if (range === '30d') startDate.setDate(now.getDate() - 30);
     else if (range === '3m') startDate.setMonth(now.getMonth() - 3);
     else if (range === '6m') startDate.setMonth(now.getMonth() - 6);

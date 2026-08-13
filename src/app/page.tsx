@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chartRange, setChartRange] = useState<'7d' | '30d' | '3m' | '6m' | '1y'>('30d');
+  const [chartRange, setChartRange] = useState<'1d' | '7d' | '30d' | '3m' | '6m' | '1y'>('30d');
   const [chartMetric, setChartMetric] = useState<'revenue' | 'count'>('revenue');
   const [chartRawData, setChartRawData] = useState<any[]>([]);
   const [chartSummary, setChartSummary] = useState<{ totalRevenue: number; totalCount: number } | null>(null);
@@ -484,13 +484,13 @@ export default function DashboardPage() {
 
             {/* Range Switcher */}
             <div className="filter-chips">
-              {(['7d', '30d', '3m', '6m', '1y'] as const).map((range) => (
+              {(['1d', '7d', '30d', '3m', '6m', '1y'] as const).map((range) => (
                 <button
                   key={range}
                   className={`filter-chip ${chartRange === range ? 'active' : ''}`}
                   onClick={() => setChartRange(range)}
                 >
-                  {range === '7d' ? '7 dias' : range === '30d' ? '30 dias' : range === '3m' ? '3 meses' : range === '6m' ? '6 meses' : '1 ano'}
+                  {range === '1d' ? 'Hoje' : range === '7d' ? '7 dias' : range === '30d' ? '30 dias' : range === '3m' ? '3 meses' : range === '6m' ? '6 meses' : '1 ano'}
                 </button>
               ))}
             </div>

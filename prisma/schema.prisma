@@ -121,12 +121,15 @@ model Wash {
   subtotal    Float     @default(0)
   discount    Float     @default(0)
   total       Float     @default(0)
-  notes       String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  deliveredAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  notes               String?
+  pickupCode          String?
+  paymentMethod       String?   // MONEY, PIX, DEBIT, CREDIT
+  pickupCodeBypassed  Boolean   @default(false)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  deliveredAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer         Customer          @relation(fields: [customerId], references: [id])

@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
 
     const numericDiscount = parseFloat(discount) || 0;
     const total = Math.max(0, subtotal - numericDiscount);
+    const pickupCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     const wash = await prisma.wash.create({
       data: {
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
         discount: numericDiscount,
         total,
         notes,
+        pickupCode,
         startedAt: new Date(),
         items: {
           create: processedItems,

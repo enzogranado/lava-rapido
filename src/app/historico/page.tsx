@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { History, Search, Calendar, DollarSign, Car, MessageCircle, FileText, Filter, CheckCircle2, Droplets } from 'lucide-react';
-import { formatCurrency, formatDate, formatTime, STATUS_LABELS, STATUS_COLORS, buildReadyMessage, openWhatsAppDirect } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime, STATUS_LABELS, STATUS_COLORS, buildReadyMessage, openWhatsAppDirect, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface WashItem {
@@ -273,7 +273,12 @@ export default function HistoricoPage() {
                       </div>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-primary-400)', fontSize: '0.9375rem' }}>
-                      {formatCurrency(wash.total)}
+                      <div>{formatCurrency(wash.total)}</div>
+                      {(wash as any).paymentMethod && (
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                          {PAYMENT_METHOD_LABELS[(wash as any).paymentMethod]?.icon} {PAYMENT_METHOD_LABELS[(wash as any).paymentMethod]?.label || (wash as any).paymentMethod}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span

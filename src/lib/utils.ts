@@ -154,20 +154,39 @@ export function whatsappLink(phone: string, message?: string): string {
   return `https://web.whatsapp.com/send?phone=${cleaned}${encodedText ? `&text=${encodedText}` : ''}`;
 }
 
+export const PAYMENT_METHOD_LABELS: Record<string, { label: string; icon: string }> = {
+  MONEY: { label: 'Dinheiro', icon: '💵' },
+  PIX: { label: 'PIX', icon: '⚡' },
+  DEBIT: { label: 'Cartão de Débito', icon: '💳' },
+  CREDIT: { label: 'Cartão de Crédito', icon: '💳' },
+};
+
 // Build ready message from template
 export function buildReadyMessage(
   template: string | null | undefined,
   customerName: string,
   vehicleModel: string,
-  vehiclePlate: string
+  vehiclePlate: string,
+  pickupCode?: string | null
 ): string {
   const defaultTemplate =
-    'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\nObrigado por confiar em nosso lava-rápido! 🚿';
+    'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — ficou pronto e já está disponível para retirada.\n\n🔑 Seu código de retirada é: {codigo}\n\nObrigado por confiar em nosso lava-rápido! 🚿';
   const tpl = template || defaultTemplate;
   return tpl
     .replace(/{nome}/g, customerName)
     .replace(/{modelo}/g, vehicleModel)
-    .replace(/{placa}/g, vehiclePlate);
+    .replace(/{placa}/g, vehiclePlate)
+    .replace(/{codigo}/g, pickupCode || '----');
+}
+
+// Build entry message with pickup code
+export function buildEntryCodeMessage(
+  customerName: string,
+  vehicleModel: string,
+  vehiclePlate: string,
+  pickupCode?: string | null
+): string {
+  return `Olá, ${customerName}! 🚗✨\n\nConfirmamos a entrada do seu veículo *${vehicleModel}* (Placa: *${vehiclePlate}*) na lavagem!\n\n🔑 *Seu código de segurança para retirada é: ${pickupCode || '----'}*\n\nApresente este código no balcão ao vir retirar o veículo. Obrigado por confiar em nosso trabalho! 🚿`;
 }
 
 // Open WhatsApp directly without async delay

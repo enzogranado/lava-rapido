@@ -14,10 +14,12 @@ import {
   ChevronRight,
   Filter,
   UserPlus,
-  ArrowRight,
-  Sparkles,
+  Key,
+  ShieldCheck,
+  DollarSign,
+  Lock,
 } from 'lucide-react';
-import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, buildReadyMessage, openWhatsAppDirect } from '@/lib/utils';
+import { formatCurrency, formatTime, timeDuration, STATUS_LABELS, buildReadyMessage, buildEntryCodeMessage, openWhatsAppDirect, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 
 interface Service {
@@ -50,6 +52,9 @@ interface Wash {
   discount: number;
   total: number;
   notes?: string;
+  pickupCode?: string;
+  paymentMethod?: string;
+  pickupCodeBypassed?: boolean;
   createdAt: string;
   completedAt?: string;
   customer: { id: string; name: string; phone: string };
@@ -84,6 +89,14 @@ export default function AtendimentosPage() {
   const [discount, setDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Delivery & Security Code Modal State
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [deliveryWash, setDeliveryWash] = useState<Wash | null>(null);
+  const [deliveryPickupCode, setDeliveryPickupCode] = useState('');
+  const [deliveryPaymentMethod, setDeliveryPaymentMethod] = useState<'MONEY' | 'PIX' | 'DEBIT' | 'CREDIT'>('MONEY');
+  const [deliveryBypass, setDeliveryBypass] = useState(false);
+  const [submittingDelivery, setSubmittingDelivery] = useState(false);
 
   // Inline Quick Registration state (Inside Modal)
   const [isRegisteringQuick, setIsRegisteringQuick] = useState(false);
@@ -150,6 +163,18 @@ export default function AtendimentosPage() {
 
   // 1-Click Status Update
   const handleStatusChange = async (washId: string, newStatus: string) => {
+    if (newStatus === 'DELIVERED') {
+      const targetWash = washes.find((w) => w.id === washId);
+      if (targetWash) {
+        setDeliveryWash(targetWash);
+        setDeliveryPickupCode('');
+        setDeliveryPaymentMethod('MONEY');
+        setDeliveryBypass(false);
+        setShowDeliveryModal(true);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`/api/washes/${washId}/status`, {
         method: 'PATCH',
@@ -161,7 +186,8 @@ export default function AtendimentosPage() {
         showToast(`Carro atualizado para: ${STATUS_LABELS[newStatus]}`, 'success');
         fetchWashes();
       } else {
-        showToast('Erro ao alterar status', 'error');
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || 'Erro ao alterar status', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -169,12 +195,72 @@ export default function AtendimentosPage() {
     }
   };
 
+  const handleConfirmDelivery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deliveryWash) return;
+
+    if (!deliveryBypass && deliveryWash.pickupCode) {
+      if (!deliveryPickupCode || deliveryPickupCode.trim() !== deliveryWash.pickupCode.trim()) {
+        showToast('Código de retirada incorreto! Informe os 4 dígitos enviados ao cliente ou marque "Confio no cliente".', 'error');
+        return;
+      }
+    }
+
+    try {
+      setSubmittingDelivery(true);
+      const res = await fetch(`/api/washes/${deliveryWash.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'DELIVERED',
+          pickupCode: deliveryPickupCode,
+          bypassCode: deliveryBypass,
+          paymentMethod: deliveryPaymentMethod,
+        }),
+      });
+
+      if (res.ok) {
+        showToast('Veículo entregue e pagamento registrado com sucesso!', 'success');
+        setShowDeliveryModal(false);
+        setDeliveryWash(null);
+        fetchWashes();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Erro ao registrar entrega', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Erro de conexão ao registrar entrega', 'error');
+    } finally {
+      setSubmittingDelivery(false);
+    }
+  };
+
+  const handleSendPickupCode = (wash: Wash) => {
+    const messageText = buildEntryCodeMessage(
+      wash.customer.name,
+      wash.vehicle.model,
+      wash.vehicle.plate,
+      wash.pickupCode
+    );
+
+    openWhatsAppDirect(wash.customer.phone, messageText);
+    showToast(`Abrindo WhatsApp para enviar código a ${wash.customer.name}...`, 'success');
+
+    fetch('/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ washId: wash.id }),
+    }).catch((err) => console.error('Error logging WhatsApp message send:', err));
+  };
+
   const handleSendWhatsApp = (wash: Wash) => {
     const messageText = buildReadyMessage(
       whatsappTemplate,
       wash.customer.name,
       wash.vehicle.model,
-      wash.vehicle.plate
+      wash.vehicle.plate,
+      wash.pickupCode
     );
 
     // Open WhatsApp directly without async delay or popup blockers
@@ -280,9 +366,14 @@ export default function AtendimentosPage() {
       });
 
       if (res.ok) {
+        const createdWash = await res.json();
         showToast('Atendimento criado com sucesso! Carro em esteira.', 'success');
         setShowModal(false);
         fetchWashes();
+
+        if (createdWash?.pickupCode && createdWash?.customer?.phone) {
+          handleSendPickupCode(createdWash);
+        }
       } else {
         const data = await res.json();
         showToast(data.error || 'Erro ao criar atendimento', 'error');
@@ -467,11 +558,36 @@ export default function AtendimentosPage() {
                     </div>
 
                     <div>
-                      <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        {wash.vehicle.model}
+                      <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{wash.vehicle.model}</span>
                         {wash.vehicle.color && (
-                          <span style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: '8px' }}>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-tertiary)' }}>
                             ({wash.vehicle.color})
+                          </span>
+                        )}
+                        {wash.pickupCode && (
+                          <span
+                            style={{
+                              background: 'rgba(56, 189, 248, 0.12)',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              color: '#38bdf8',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              fontFamily: 'monospace',
+                            }}
+                            title="Código de Retirada do Cliente"
+                          >
+                            🔑 Código: {wash.pickupCode}
+                          </span>
+                        )}
+                        {wash.paymentMethod && (
+                          <span
+                            className="badge badge-success"
+                            style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                          >
+                            {PAYMENT_METHOD_LABELS[wash.paymentMethod]?.icon} {PAYMENT_METHOD_LABELS[wash.paymentMethod]?.label || wash.paymentMethod}
                           </span>
                         )}
                       </div>
@@ -485,7 +601,7 @@ export default function AtendimentosPage() {
                     </div>
                   </div>
 
-                  {/* Total & WhatsApp Quick Action */}
+                  {/* Total & WhatsApp Quick Actions */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Total Cobrado</div>
@@ -494,15 +610,29 @@ export default function AtendimentosPage() {
                       </div>
                     </div>
 
-                    {isReady && (
-                      <button
-                        className="btn btn-whatsapp"
-                        onClick={() => handleSendWhatsApp(wash)}
-                      >
-                        <MessageCircle size={18} />
-                        📱 Avisar Cliente
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {wash.pickupCode && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleSendPickupCode(wash)}
+                          title="Enviar código de retirada via WhatsApp ao cliente"
+                          style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
+                        >
+                          <MessageCircle size={16} />
+                          📲 Enviar Código
+                        </button>
+                      )}
+
+                      {isReady && (
+                        <button
+                          className="btn btn-whatsapp"
+                          onClick={() => handleSendWhatsApp(wash)}
+                        >
+                          <MessageCircle size={18} />
+                          📱 Avisar Pronto
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -839,6 +969,141 @@ export default function AtendimentosPage() {
                 </button>
                 <button type="submit" className="btn btn-primary btn-lg" disabled={submitting || selectedServices.length === 0}>
                   {submitting ? 'Registrando...' : '🚀 Colocar Carro na Lavagem'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Delivery & Security Code Modal */}
+      {showDeliveryModal && deliveryWash && (
+        <div className="modal-overlay" onClick={() => setShowDeliveryModal(false)}>
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '540px' }}
+          >
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">🔑 Finalizar Entrega & Pagamento</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                  Selecione o método de pagamento e informe o código de segurança do cliente.
+                </p>
+              </div>
+              <button
+                className="modal-close"
+                onClick={() => setShowDeliveryModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmDelivery} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Summary Card */}
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {deliveryWash.vehicle.model}
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    Placa: <strong style={{ color: 'var(--color-primary-400)', fontFamily: 'monospace' }}>{deliveryWash.vehicle.plate}</strong> • Cliente: {deliveryWash.customer.name}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Valor Total</div>
+                  <div style={{ fontSize: '1.375rem', fontWeight: 900, color: 'var(--color-primary-400)' }}>
+                    {formatCurrency(deliveryWash.total)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 700 }}>
+                  💳 Forma de Pagamento Realizada *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                  {[
+                    { id: 'MONEY', label: 'Dinheiro', icon: '💵', color: '#22c55e' },
+                    { id: 'PIX', label: 'PIX', icon: '⚡', color: '#06b6d4' },
+                    { id: 'DEBIT', label: 'Cartão de Débito', icon: '💳', color: '#38bdf8' },
+                    { id: 'CREDIT', label: 'Cartão de Crédito', icon: '💳', color: '#a855f7' },
+                  ].map((method) => {
+                    const selected = deliveryPaymentMethod === method.id;
+                    return (
+                      <div
+                        key={method.id}
+                        onClick={() => setDeliveryPaymentMethod(method.id as any)}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: selected ? `2px solid ${method.color}` : '1px solid var(--glass-border)',
+                          background: selected ? 'rgba(56, 189, 248, 0.12)' : 'var(--bg-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          fontWeight: 700,
+                          color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span style={{ fontSize: '1.25rem' }}>{method.icon}</span>
+                        <span>{method.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Security Pickup Code Input */}
+              <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🛡️ Código de Retirada do Cliente</span>
+                  </label>
+                  {deliveryWash.pickupCode && (
+                    <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>
+                      Código gerado: {deliveryWash.pickupCode}
+                    </span>
+                  )}
+                </div>
+
+                {!deliveryBypass ? (
+                  <input
+                    type="text"
+                    maxLength={4}
+                    className="form-input"
+                    placeholder="Digite os 4 dígitos informados pelo cliente..."
+                    value={deliveryPickupCode}
+                    onChange={(e) => setDeliveryPickupCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    style={{ fontSize: '1.25rem', letterSpacing: '0.25em', fontWeight: 800, textAlign: 'center' }}
+                  />
+                ) : (
+                  <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.875rem', fontWeight: 600 }}>
+                    🤝 Modo de confiança ativado: O veículo será liberado sem validação numérica do código.
+                  </div>
+                )}
+
+                {/* Bypass Option */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={deliveryBypass}
+                    onChange={(e) => setDeliveryBypass(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary-400)' }}
+                  />
+                  <span><strong>Confio no cliente</strong> (liberar retirada sem validar o código)</span>
+                </label>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '8px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowDeliveryModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-success btn-lg" disabled={submittingDelivery}>
+                  {submittingDelivery ? 'Registrando Entrega...' : '✅ Confirmar Entrega & Pagamento'}
                 </button>
               </div>
             </form>

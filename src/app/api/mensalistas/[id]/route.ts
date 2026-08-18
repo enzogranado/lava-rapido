@@ -2,6 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getTenantIdOrFallback } from '@/lib/auth';
 
+// GET /api/mensalistas/[id] — Fetch single mensalista with details and extras
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const tenantId = await getTenantIdOrFallback(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    const { id } = await params;
+
+    const mensalista = await prisma.mensalista.findFirst({
+      where: { id, tenantId },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        vehicle: { select: { id: true, model: true, plate: true } },
+        plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
+        extras: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            service: { select: { id: true, name: true, price: true } },
+            wash: {
+              select: {
+                id: true,
+                status: true,
+                total: true,
+                vehicle: { select: { model: true, plate: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!mensalista) {
+      return NextResponse.json({ error: 'Mensalista não encontrado' }, { status: 404 });
+    }
+
+    const pendingExtras = mensalista.extras.filter((e) => e.status === 'PENDING');
+    const pendingExtrasTotal = pendingExtras.reduce((sum, e) => sum + e.amount, 0);
+
+    return NextResponse.json({
+      ...mensalista,
+      pendingExtrasCount: pendingExtras.length,
+      pendingExtrasTotal,
+      totalMonthAmount: mensalista.plan.price + pendingExtrasTotal,
+    });
+  } catch (error) {
+    console.error('Error fetching mensalista:', error);
+    return NextResponse.json({ error: 'Failed to fetch mensalista' }, { status: 500 });
+  }
+}
+
 // PUT /api/mensalistas/[id] — Update subscription status, plan, payment info, or mark payment received
 export async function PUT(
   request: NextRequest,
@@ -14,7 +68,7 @@ export async function PUT(
     }
     const { id } = await params;
     const body = await request.json();
-    const { status, planId, vehicleId, paymentMethod, dueDay, notes, markPaid } = body;
+    const { status, planId, vehicleId, paymentMethod, dueDay, notes, markPaid, markExtrasPaid = true } = body;
 
     const existing = await prisma.mensalista.findFirst({ where: { id, tenantId } });
     if (!existing) {
@@ -74,6 +128,12 @@ export async function PUT(
 
     if (markPaid) {
       updateData.lastPaymentDate = new Date();
+      if (markExtrasPaid) {
+        await prisma.mensalistaExtra.updateMany({
+          where: { tenantId, mensalistaId: id, status: 'PENDING' },
+          data: { status: 'PAID', paidAt: new Date() },
+        });
+      }
     }
 
     const mensalista = await prisma.mensalista.update({
@@ -83,10 +143,32 @@ export async function PUT(
         customer: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { id: true, model: true, plate: true } },
         plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
+        extras: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            service: { select: { id: true, name: true, price: true } },
+            wash: {
+              select: {
+                id: true,
+                status: true,
+                total: true,
+                vehicle: { select: { model: true, plate: true } },
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(mensalista);
+    const pendingExtras = mensalista.extras.filter((e) => e.status === 'PENDING');
+    const pendingExtrasTotal = pendingExtras.reduce((sum, e) => sum + e.amount, 0);
+
+    return NextResponse.json({
+      ...mensalista,
+      pendingExtrasCount: pendingExtras.length,
+      pendingExtrasTotal,
+      totalMonthAmount: mensalista.plan.price + pendingExtrasTotal,
+    });
   } catch (error) {
     console.error('Error updating mensalista:', error);
     return NextResponse.json({ error: 'Failed to update mensalista' }, { status: 500 });

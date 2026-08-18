@@ -103,6 +103,7 @@ export default function AtendimentosPage() {
   >([]);
   const [discount, setDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
+  const [chargeToMensalista, setChargeToMensalista] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Delivery & Security Code Modal State
@@ -401,6 +402,7 @@ export default function AtendimentosPage() {
           discount,
           notes,
           trackingToken,
+          chargeToMensalista: Boolean(selectedCustomer.mensalista && chargeToMensalista),
         }),
       });
 
@@ -893,25 +895,34 @@ export default function AtendimentosPage() {
                   </div>
                 )}
 
-                {/* Informational badge — this customer has an active monthly subscription */}
+                {/* Informational badge & Option to charge on monthly invoice */}
                 {selectedCustomer?.mensalista && (
                   <div
                     style={{
                       background: 'rgba(56, 189, 248, 0.1)',
                       border: '1px solid rgba(56, 189, 248, 0.3)',
                       borderRadius: '10px',
-                      padding: '10px 14px',
+                      padding: '12px 14px',
                       display: 'flex',
-                      alignItems: 'center',
+                      flexDirection: 'column',
                       gap: '8px',
-                      fontSize: '0.8125rem',
-                      color: '#38bdf8',
                     }}
                   >
-                    <Repeat size={16} />
-                    <span>
-                      <strong>Cliente Mensalista</strong> — Plano {selectedCustomer.mensalista.plan.name} ({formatCurrency(selectedCustomer.mensalista.plan.price)}/mês). A cobrança desta lavagem segue normal, ajuste o valor abaixo se estiver incluída no plano.
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#38bdf8' }}>
+                      <Repeat size={16} />
+                      <span>
+                        <strong>Cliente Mensalista</strong> — Plano {selectedCustomer.mensalista.plan.name} ({formatCurrency(selectedCustomer.mensalista.plan.price)}/mês)
+                      </span>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <input
+                        type="checkbox"
+                        checked={chargeToMensalista}
+                        onChange={(e) => setChargeToMensalista(e.target.checked)}
+                        style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary-400)' }}
+                      />
+                      <span>💳 Lançar valor como <strong>extra na mensalidade deste mês</strong></span>
+                    </label>
                   </div>
                 )}
 

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     const body = await request.json();
-    const { customerId, vehicleId, items, discount = 0, notes, trackingToken } = body;
+    const { customerId, vehicleId, items, discount = 0, notes, trackingToken, chargeToMensalista, paymentMethod } = body;
 
     if (!customerId || !vehicleId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -134,6 +134,8 @@ export async function POST(request: NextRequest) {
       finalTrackingToken = generateTrackingToken();
     }
 
+    const resolvedPaymentMethod = chargeToMensalista ? 'MENSALISTA' : (paymentMethod || null);
+
     const wash = await prisma.wash.create({
       data: {
         tenantId,
@@ -144,6 +146,7 @@ export async function POST(request: NextRequest) {
         discount: numericDiscount,
         total,
         notes,
+        paymentMethod: resolvedPaymentMethod,
         pickupCode,
         trackingToken: finalTrackingToken,
         startedAt: new Date(),
@@ -157,6 +160,32 @@ export async function POST(request: NextRequest) {
         items: true,
       },
     });
+
+    if (chargeToMensalista && total > 0) {
+      const activeMensalista = await prisma.mensalista.findFirst({
+        where: { customerId, tenantId, status: 'ATIVO' },
+      });
+
+      if (activeMensalista) {
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const serviceNames = processedItems.map((p) => p.serviceNameSnapshot).join(' + ');
+
+        await prisma.mensalistaExtra.create({
+          data: {
+            tenantId,
+            mensalistaId: activeMensalista.id,
+            washId: wash.id,
+            description: serviceNames ? `Lavagem: ${serviceNames}` : 'Lavagem avulsa',
+            amount: total,
+            category: 'WASH',
+            status: 'PENDING',
+            billingMonth: currentMonth,
+            notes: notes || 'Lançado a partir de Atendimentos',
+          },
+        });
+      }
+    }
 
     return NextResponse.json(wash, { status: 201 });
   } catch (error) {

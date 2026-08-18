@@ -23,6 +23,13 @@ export async function GET(
           include: {
             plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
             vehicle: { select: { id: true, model: true, plate: true } },
+            extras: {
+              orderBy: { createdAt: 'desc' },
+              include: {
+                service: { select: { id: true, name: true, price: true } },
+                wash: { select: { id: true, status: true, total: true } },
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },

@@ -40,15 +40,38 @@ export async function GET(request: NextRequest) {
         customer: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { id: true, model: true, plate: true } },
         plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
+        extras: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            service: { select: { id: true, name: true, price: true } },
+            wash: {
+              select: {
+                id: true,
+                status: true,
+                total: true,
+                vehicle: { select: { model: true, plate: true } },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     const now = new Date();
-    const result = mensalistas.map((m) => ({
-      ...m,
-      isOverdue: m.status === 'ATIVO' ? computeIsOverdue(m.dueDay, m.lastPaymentDate, now) : false,
-    }));
+    const result = mensalistas.map((m) => {
+      const pendingExtras = m.extras.filter((e) => e.status === 'PENDING');
+      const pendingExtrasTotal = pendingExtras.reduce((sum, e) => sum + e.amount, 0);
+      const totalMonthAmount = m.plan.price + pendingExtrasTotal;
+
+      return {
+        ...m,
+        pendingExtrasCount: pendingExtras.length,
+        pendingExtrasTotal,
+        totalMonthAmount,
+        isOverdue: m.status === 'ATIVO' ? computeIsOverdue(m.dueDay, m.lastPaymentDate, now) : false,
+      };
+    });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -118,10 +141,17 @@ export async function POST(request: NextRequest) {
         customer: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { id: true, model: true, plate: true } },
         plan: { select: { id: true, name: true, price: true, washesIncluded: true } },
+        extras: true,
       },
     });
 
-    return NextResponse.json(mensalista, { status: 201 });
+    return NextResponse.json({
+      ...mensalista,
+      pendingExtrasCount: 0,
+      pendingExtrasTotal: 0,
+      totalMonthAmount: mensalista.plan.price,
+      isOverdue: false,
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating mensalista:', error);
     return NextResponse.json({ error: 'Failed to create mensalista' }, { status: 500 });

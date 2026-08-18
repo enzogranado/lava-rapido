@@ -49,6 +49,14 @@ interface CustomerDetail {
     paymentMethod?: string | null;
     plan: { name: string; price: number; washesIncluded: number | null };
     vehicle: { model: string; plate: string } | null;
+    extras?: Array<{
+      id: string;
+      description: string;
+      amount: number;
+      category: string;
+      status: string;
+      createdAt: string;
+    }>;
   }>;
 }
 
@@ -287,6 +295,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       {/* Assinatura Mensalista */}
       {(() => {
         const activeMensalista = customer.mensalistas?.find((m) => m.status === 'ATIVO');
+        const pendingExtras = activeMensalista?.extras?.filter((e) => e.status === 'PENDING') || [];
+        const pendingTotal = pendingExtras.reduce((sum, e) => sum + e.amount, 0);
+        const monthTotal = activeMensalista ? activeMensalista.plan.price + pendingTotal : 0;
+
         return (
           <div className="card" style={activeMensalista ? { borderLeft: '4px solid var(--color-primary-400)' } : undefined}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -300,27 +312,56 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {activeMensalista ? (
-              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Plano</div>
-                  <div style={{ fontWeight: 700 }}>{activeMensalista.plan.name} — {formatCurrency(activeMensalista.plan.price)}/mês</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Veículo Coberto</div>
-                  <div style={{ fontWeight: 700 }}>
-                    {activeMensalista.vehicle ? `${activeMensalista.vehicle.model} (${activeMensalista.vehicle.plate})` : 'Não especificado'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Plano</div>
+                    <div style={{ fontWeight: 700 }}>{activeMensalista.plan.name} — {formatCurrency(activeMensalista.plan.price)}/mês</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Veículo Coberto</div>
+                    <div style={{ fontWeight: 700 }}>
+                      {activeMensalista.vehicle ? `${activeMensalista.vehicle.model} (${activeMensalista.vehicle.plate})` : 'Não especificado'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Vencimento</div>
+                    <div style={{ fontWeight: 700 }}>Todo dia {activeMensalista.dueDay}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Último Pagamento</div>
+                    <div style={{ fontWeight: 700 }}>
+                      {activeMensalista.lastPaymentDate ? formatDate(activeMensalista.lastPaymentDate) : 'Ainda não registrado'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Total deste Mês (Plano + Extras)</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.125rem', color: pendingTotal > 0 ? '#38bdf8' : 'var(--text-primary)' }}>
+                      {formatCurrency(monthTotal)}
+                      {pendingTotal > 0 && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#38bdf8', marginLeft: '6px' }}>
+                          (+{formatCurrency(pendingTotal)} em extras)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Vencimento</div>
-                  <div style={{ fontWeight: 700 }}>Todo dia {activeMensalista.dueDay}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Último Pagamento</div>
-                  <div style={{ fontWeight: 700 }}>
-                    {activeMensalista.lastPaymentDate ? formatDate(activeMensalista.lastPaymentDate) : 'Ainda não registrado'}
+
+                {pendingExtras.length > 0 && (
+                  <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '10px', padding: '12px 14px' }}>
+                    <strong style={{ fontSize: '0.8125rem', color: '#38bdf8', display: 'block', marginBottom: '8px' }}>
+                      Lavagens e Serviços Extras Pendentes deste Mês ({pendingExtras.length}):
+                    </strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {pendingExtras.map((ex) => (
+                        <div key={ex.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+                          <span>• {ex.description} <span style={{ color: 'var(--text-tertiary)' }}>({formatDate(ex.createdAt)})</span></span>
+                          <strong style={{ color: '#38bdf8' }}>{formatCurrency(ex.amount)}</strong>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginTop: '8px' }}>

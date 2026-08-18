@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Award, Calendar, BarChart2, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { DollarSign, TrendingUp, Award, Calendar, BarChart2, Lock, Eye, EyeOff, KeyRound, Zap, CreditCard, Banknote, Repeat, Layers } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 import dynamic from 'next/dynamic';
@@ -39,6 +39,18 @@ interface ServiceBreakdown {
   revenue: number;
 }
 
+interface PaymentMethodStat {
+  id: string;
+  label: string;
+  color: string;
+  icon: string;
+  count: number;
+  countPercentage: number;
+  revenue: number;
+  percentage: number;
+  ticketMedio: number;
+}
+
 export default function FinanceiroPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -55,6 +67,12 @@ export default function FinanceiroPage() {
     overallTicketMedio: number;
   } | null>(null);
   const [serviceBreakdown, setServiceBreakdown] = useState<ServiceBreakdown[]>([]);
+  const [paymentMethodsData, setPaymentMethodsData] = useState<{
+    totalRevenue: number;
+    totalCount: number;
+    overallTicketMedio: number;
+    methods: PaymentMethodStat[];
+  } | null>(null);
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity'>('revenue');
   const { showToast } = useToast();
 
@@ -103,13 +121,15 @@ export default function FinanceiroPage() {
   const fetchFinancialData = async () => {
     try {
       setLoading(true);
-      const [revRes, svcRes] = await Promise.all([
+      const [revRes, svcRes, payRes] = await Promise.all([
         fetch(`/api/financial/revenue?range=${range}`),
         fetch(`/api/financial/by-service?range=${range}`),
+        fetch(`/api/financial/by-payment-method?range=${range}`),
       ]);
 
       if (revRes.ok) setRevenueData(await revRes.json());
       if (svcRes.ok) setServiceBreakdown(await svcRes.json());
+      if (payRes.ok) setPaymentMethodsData(await payRes.json());
     } catch (err) {
       console.error(err);
       showToast('Erro ao carregar dados financeiros', 'error');
@@ -458,6 +478,106 @@ export default function FinanceiroPage() {
               />
             </div>
           </div>
+
+          {/* Payment Methods Breakdown */}
+          {paymentMethodsData && paymentMethodsData.methods.length > 0 && (
+            <div className="card">
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Receita por Forma de Pagamento</h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Detalhamento de transações e volume faturado em PIX, Cartões e Dinheiro
+                </p>
+              </div>
+
+              {/* Multi-segment progress bar */}
+              {paymentMethodsData.totalRevenue > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      height: '20px',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--glass-border)',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    {paymentMethodsData.methods
+                      .filter((m) => m.percentage > 0)
+                      .map((m) => (
+                        <div
+                          key={m.id}
+                          style={{
+                            width: `${m.percentage}%`,
+                            background: m.color,
+                            height: '100%',
+                          }}
+                          title={`${m.label}: ${formatCurrency(m.revenue)} (${m.percentage}%)`}
+                        />
+                      ))}
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
+                    {paymentMethodsData.methods
+                      .filter((m) => m.count > 0)
+                      .map((m) => (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: m.color }} />
+                          <strong style={{ color: 'var(--text-primary)' }}>{m.label}:</strong>
+                          <span style={{ color: 'var(--text-secondary)' }}>
+                            {formatCurrency(m.revenue)} ({m.percentage}%)
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Forma de Pagamento</th>
+                      <th style={{ textAlign: 'center' }}>Qtd. Transações</th>
+                      <th style={{ textAlign: 'center' }}>% Transações</th>
+                      <th style={{ textAlign: 'right' }}>Faturamento (R$)</th>
+                      <th style={{ textAlign: 'center' }}>% Faturamento</th>
+                      <th style={{ textAlign: 'right' }}>Ticket Médio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentMethodsData.methods.map((m) => (
+                      <tr key={m.id}>
+                        <td style={{ fontWeight: 700 }}>{m.label}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 600 }}>{m.count}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>{m.countPercentage}%</span>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: m.revenue > 0 ? m.color : 'var(--text-tertiary)' }}>
+                          {formatCurrency(m.revenue)}
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: 600 }}>{m.percentage}%</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(m.ticketMedio)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.03)', fontWeight: 800 }}>
+                      <td>Total Geral</td>
+                      <td style={{ textAlign: 'center' }}>{paymentMethodsData.totalCount}</td>
+                      <td style={{ textAlign: 'center' }}>100%</td>
+                      <td style={{ textAlign: 'right', color: 'var(--color-primary-400)' }}>
+                        {formatCurrency(paymentMethodsData.totalRevenue)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>100%</td>
+                      <td style={{ textAlign: 'right' }}>{formatCurrency(paymentMethodsData.overallTicketMedio)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

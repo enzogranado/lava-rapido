@@ -4,7 +4,7 @@ import { hashPassword, createSessionToken, COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { businessName, ownerName, email, password, phone, dashboardPin } = await request.json();
+    const { businessName, ownerName, email, password, phone, dashboardPin, businessType = 'HIBRIDO' } = await request.json();
 
     if (!businessName || !ownerName || !email || !password) {
       return NextResponse.json({ error: 'Preencha todos os campos obrigatórios.' }, { status: 400 });
@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
 
     const cleanPin = dashboardPin && String(dashboardPin).trim().length === 4 ? String(dashboardPin).trim() : '1234';
     const cleanEmail = email.trim().toLowerCase();
+    const cleanBusinessType = ['LAVA_RAPIDO', 'ESTACIONAMENTO', 'HIBRIDO'].includes(businessType) ? businessType : 'HIBRIDO';
 
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       return NextResponse.json({ error: 'Por favor, informe um endereço de e-mail válido (ex: seuemail@dominio.com).' }, { status: 400 });
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
           phone: phone || null,
           email: cleanEmail,
           dashboardPin: cleanPin,
+          businessType: cleanBusinessType,
           active: false,
           status: 'PENDING',
           paymentStatus: 'PENDING',
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
           phone: phone || null,
           email: cleanEmail,
           dashboardPin: cleanPin,
+          businessType: cleanBusinessType,
           active: false,
         },
       });

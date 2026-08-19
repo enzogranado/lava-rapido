@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
           ownerName: ownerUser?.name || 'N/A',
           active: t.active,
           status: t.status,
+          businessType: t.businessType || 'HIBRIDO',
           paymentStatus: t.paymentStatus,
           monthlyFee: t.monthlyFee,
           lastPaymentDate: t.lastPaymentDate,
@@ -168,7 +169,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const { tenantId, action, active, status, paymentStatus, monthlyFee } = await request.json();
+    const { tenantId, action, active, status, paymentStatus, monthlyFee, businessType } = await request.json();
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId é obrigatório' }, { status: 400 });
@@ -206,6 +207,8 @@ export async function PATCH(request: NextRequest) {
       };
     } else if (action === 'TOGGLE_ACTIVE') {
       updateData = { active };
+    } else if (action === 'SET_BUSINESS_TYPE') {
+      updateData = { businessType };
     } else if (action === 'SET_PAYMENT_STATUS') {
       updateData = {
         paymentStatus,
@@ -217,6 +220,7 @@ export async function PATCH(request: NextRequest) {
       if (status !== undefined) updateData.status = status;
       if (paymentStatus !== undefined) updateData.paymentStatus = paymentStatus;
       if (monthlyFee !== undefined) updateData.monthlyFee = parseFloat(monthlyFee);
+      if (businessType !== undefined) updateData.businessType = businessType;
     }
 
     let updated;

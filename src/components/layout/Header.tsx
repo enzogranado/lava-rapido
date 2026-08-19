@@ -10,8 +10,9 @@ interface HeaderProps {
 }
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Dashboard', subtitle: 'Visão geral do seu lava-rápido' },
+  '/': { title: 'Dashboard', subtitle: 'Visão geral do seu negócio' },
   '/atendimentos': { title: 'Atendimentos', subtitle: 'Gerencie os atendimentos em andamento' },
+  '/estacionamento': { title: 'Estacionamento & Pátio', subtitle: 'Controle de entrada, vagas, permanência e código de retirada' },
   '/clientes': { title: 'Clientes', subtitle: 'Cadastro e histórico de clientes' },
   '/veiculos': { title: 'Veículos', subtitle: 'Veículos cadastrados' },
   '/servicos': { title: 'Serviços', subtitle: 'Configure seus serviços e preços' },

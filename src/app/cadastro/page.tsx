@@ -14,6 +14,7 @@ export default function CadastroPage() {
     email: '',
     password: '',
     dashboardPin: '1234',
+    businessType: 'HIBRIDO',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPinInfo, setShowPinInfo] = useState(false);
@@ -70,7 +71,7 @@ export default function CadastroPage() {
       padding: '16px',
       boxSizing: 'border-box'
     }}>
-      <div style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         
         {/* Header */}
         <Link href="/landing" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', cursor: 'pointer' }}>
@@ -98,36 +99,100 @@ export default function CadastroPage() {
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '20px',
           padding: '36px',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 136, 230, 0.08)'
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
         }}>
           {successMsg ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center', alignItems: 'center' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '20px', padding: '10px 0' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(34, 197, 94, 0.15)',
+                color: '#22c55e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
                 <CheckCircle2 size={36} />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f0f4f8' }}>Ficha Cadastral Enviada!</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.9375rem', lineHeight: 1.6 }}>{successMsg}</p>
-              <Link href="/login" className="btn btn-primary" style={{ width: '100%', padding: '12px', justifyContent: 'center', marginTop: '10px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f0f4f8' }}>Cadastro Enviado!</h2>
+                <p style={{ color: '#cbd5e1', fontSize: '0.9375rem', marginTop: '8px', lineHeight: 1.6 }}>
+                  {successMsg}
+                </p>
+              </div>
+              <Link href="/login" style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #0088e6 0%, #06b6d4 100%)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.9375rem',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: '10px'
+              }}>
                 Ir para o Login
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {error && (
-                <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.875rem' }}>
+                <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171', fontSize: '0.875rem' }}>
                   {error}
                 </div>
               )}
 
+            {/* Business Type Selector */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1' }}>Nome do Lava Rápido / Empresa *</label>
+              <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#cbd5e1' }}>Tipo de Operação do seu Negócio *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { id: 'LAVA_RAPIDO', title: 'Lava Rápido', subtitle: 'Apenas lavagens', icon: '🚿' },
+                  { id: 'ESTACIONAMENTO', title: 'Estacionamento', subtitle: 'Apenas pátio/vagas', icon: '🅿️' },
+                  { id: 'HIBRIDO', title: 'Lava Rápido & Estac.', subtitle: 'Ambos integrados', icon: '🚗✨' },
+                ].map((type) => {
+                  const selected = formData.businessType === type.id;
+                  return (
+                    <div
+                      key={type.id}
+                      onClick={() => setFormData((prev) => ({ ...prev, businessType: type.id }))}
+                      style={{
+                        padding: '12px 8px',
+                        borderRadius: '12px',
+                        border: selected ? '2px solid #0088e6' : '1px solid rgba(255, 255, 255, 0.1)',
+                        background: selected ? 'rgba(0, 136, 230, 0.18)' : 'rgba(13, 18, 32, 0.8)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>{type.icon}</span>
+                      <strong style={{ fontSize: '0.75rem', color: selected ? '#ffffff' : '#cbd5e1' }}>{type.title}</strong>
+                      <span style={{ fontSize: '0.625rem', color: '#94a3b8' }}>{type.subtitle}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1' }}>Nome do Estabelecimento / Empresa *</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
                   name="businessName"
-                  placeholder="Ex: Lava Rápido Auto Shine"
+                  placeholder="Ex: Auto Shine Lava Rápido & Estacionamento"
                   value={formData.businessName}
                   onChange={handleChange}
                   required

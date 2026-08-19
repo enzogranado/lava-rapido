@@ -18,6 +18,7 @@ import {
   LogOut,
   History,
   Repeat,
+  CircleParking,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,12 +26,21 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const navItems = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: any;
+  section?: string;
+  businessFilter?: 'ALL' | 'WASH_ONLY' | 'PARKING_ONLY';
+}
+
+const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { label: 'Atendimentos (Hoje)', href: '/atendimentos', icon: Car, section: 'Operação' },
-  { label: 'Histórico de Lavagens', href: '/historico', icon: History },
+  { label: 'Atendimentos (Lavagem)', href: '/atendimentos', icon: Car, section: 'Operação', businessFilter: 'WASH_ONLY' },
+  { label: 'Estacionamento (Pátio)', href: '/estacionamento', icon: CircleParking, section: 'Operação', businessFilter: 'PARKING_ONLY' },
+  { label: 'Histórico de Lavagens', href: '/historico', icon: History, businessFilter: 'WASH_ONLY' },
   { label: 'Clientes & Veículos', href: '/clientes', icon: Users },
-  { label: 'Serviços', href: '/servicos', icon: Wrench },
+  { label: 'Serviços', href: '/servicos', icon: Wrench, businessFilter: 'WASH_ONLY' },
   { label: 'Financeiro', href: '/financeiro', icon: DollarSign, section: 'Gestão' },
   { label: 'Mensalistas', href: '/mensalistas', icon: Repeat },
   { label: 'Relatórios', href: '/relatorios', icon: BarChart3 },

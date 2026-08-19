@@ -48,6 +48,7 @@ export async function getSession(request: NextRequest): Promise<AuthSession | nu
     email: user.email,
     role: user.role as any,
     tenantName: user.tenant?.name || 'LavaFlow',
+    businessType: (user.tenant as any)?.businessType || 'HIBRIDO',
     expiresAt: session.expiresAt,
   };
 }

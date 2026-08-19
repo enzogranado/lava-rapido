@@ -5,6 +5,7 @@ export interface AuthSession {
   email: string;
   role: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'TENANT_USER';
   tenantName?: string;
+  businessType?: 'LAVA_RAPIDO' | 'ESTACIONAMENTO' | 'HIBRIDO' | string;
   expiresAt?: number;
 }
 

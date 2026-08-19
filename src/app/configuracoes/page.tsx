@@ -1,15 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, MessageCircle, Clock, Store, Lock } from 'lucide-react';
+import { Settings, Save, MessageCircle, Clock, Store, Lock, CircleParking, ShieldCheck, Key } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
 export default function ConfiguracoesPage() {
   const [businessName, setBusinessName] = useState('');
+  const [businessType, setBusinessType] = useState('HIBRIDO');
   const [inactiveDaysLimit, setInactiveDaysLimit] = useState(45);
   const [whatsappTemplate, setWhatsappTemplate] = useState('');
   const [whatsappRecallTemplate, setWhatsappRecallTemplate] = useState('');
   const [whatsappTrackingTemplate, setWhatsappTrackingTemplate] = useState('');
+  const [whatsappParkingTemplate, setWhatsappParkingTemplate] = useState('');
+
+  // Parking rates
+  const [parkingHourlyRate, setParkingHourlyRate] = useState<number | ''>(10);
+  const [parkingAdditionalHourlyRate, setParkingAdditionalHourlyRate] = useState<number | ''>(5);
+  const [parkingDailyRate, setParkingDailyRate] = useState<number | ''>(50);
+  const [parkingGraceMinutes, setParkingGraceMinutes] = useState<number | ''>(15);
+  const [parkingSpots, setParkingSpots] = useState<number | ''>(30);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
@@ -21,6 +31,7 @@ export default function ConfiguracoesPage() {
       if (res.ok) {
         const data = await res.json();
         setBusinessName(data.businessName || 'LavaFlow');
+        setBusinessType(data.businessType || 'HIBRIDO');
         setInactiveDaysLimit(data.inactiveDaysLimit || 45);
         setWhatsappTemplate(
           data.whatsappMessageTemplate ||
@@ -34,6 +45,15 @@ export default function ConfiguracoesPage() {
           data.whatsappTrackingTemplate ||
             'Olá, {nome}! 🚗✨\n\nSeu {modelo} — placa {placa} — acabou de entrar na nossa lavagem!\n\nAcompanhe o status em tempo real por aqui:\n{link}\n\nVamos te avisando a cada etapa! 🚿'
         );
+        setWhatsappParkingTemplate(
+          data.whatsappParkingTemplate ||
+            'Olá, {nome}! 🅿️🚗\n\nSeu veículo {modelo} (placa {placa}) deu entrada no nosso estacionamento às {entrada}.\n\n🔑 Seu Código de Retirada: *{codigo}*\n\nAcompanhe o tempo e valor em tempo real:\n{link}'
+        );
+        setParkingHourlyRate(data.parkingHourlyRate ?? 10);
+        setParkingAdditionalHourlyRate(data.parkingAdditionalHourlyRate ?? 5);
+        setParkingDailyRate(data.parkingDailyRate ?? 50);
+        setParkingGraceMinutes(data.parkingGraceMinutes ?? 15);
+        setParkingSpots(data.parkingSpots ?? 30);
       }
     } catch (err) {
       console.error(err);
@@ -56,10 +76,17 @@ export default function ConfiguracoesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessName,
+          businessType,
           inactiveDaysLimit,
           whatsappMessageTemplate: whatsappTemplate,
           whatsappRecallTemplate,
           whatsappTrackingTemplate,
+          whatsappParkingTemplate,
+          parkingHourlyRate: Number(parkingHourlyRate) || 10,
+          parkingAdditionalHourlyRate: Number(parkingAdditionalHourlyRate) || 5,
+          parkingDailyRate: Number(parkingDailyRate) || 50,
+          parkingGraceMinutes: Number(parkingGraceMinutes) || 15,
+          parkingSpots: Number(parkingSpots) || 30,
         }),
       });
 
@@ -90,19 +117,20 @@ export default function ConfiguracoesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Configurações do Sistema</h1>
-          <p className="page-subtitle">Personalize as regras operacionais e templates de mensagem</p>
+          <p className="page-subtitle">Personalize as regras operacionais, tarifas de estacionamento e mensagens</p>
         </div>
       </div>
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Estabelecimento & Tipo de Negócio */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Store size={20} color="var(--color-primary-400)" />
-            Dados do Estabelecimento
+            Dados do Estabelecimento & Modelo de Operação
           </h3>
 
           <div className="form-group">
-            <label className="form-label">Nome do Lava-Rápido</label>
+            <label className="form-label">Nome do Estabelecimento</label>
             <input
               type="text"
               className="form-input"
@@ -110,6 +138,127 @@ export default function ConfiguracoesPage() {
               onChange={(e) => setBusinessName(e.target.value)}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Modalidade de Negócio</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+              {[
+                { id: 'LAVA_RAPIDO', label: 'Lava Rápido', desc: 'Apenas serviços e esteira de lavagem', icon: '🚿' },
+                { id: 'ESTACIONAMENTO', label: 'Estacionamento', desc: 'Pátio, vagas rotativas e diárias', icon: '🅿️' },
+                { id: 'HIBRIDO', label: 'Lava Rápido & Estacionamento', desc: 'Ambos os módulos integrados', icon: '🚗✨' },
+              ].map((item) => {
+                const selected = businessType === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setBusinessType(item.id)}
+                    style={{
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: selected ? '2px solid var(--color-primary-400)' : '1px solid var(--glass-border)',
+                      background: selected ? 'rgba(56, 189, 248, 0.12)' : 'var(--bg-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+                      <strong style={{ fontSize: '0.875rem', color: selected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{item.label}</strong>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{item.desc}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Tarifas de Estacionamento */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CircleParking size={20} color="#38bdf8" />
+            Tarifas e Vagas do Estacionamento
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Valor 1ª Hora (R$)</label>
+              <input
+                type="number"
+                step="0.50"
+                min="0"
+                className="form-input"
+                value={parkingHourlyRate}
+                onChange={(e) => setParkingHourlyRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Hora Adicional / Fração (R$)</label>
+              <input
+                type="number"
+                step="0.50"
+                min="0"
+                className="form-input"
+                value={parkingAdditionalHourlyRate}
+                onChange={(e) => setParkingAdditionalHourlyRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Valor da Diária (R$)</label>
+              <input
+                type="number"
+                step="1.00"
+                min="0"
+                className="form-input"
+                value={parkingDailyRate}
+                onChange={(e) => setParkingDailyRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Tolerância Gratuita (min)</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                value={parkingGraceMinutes}
+                onChange={(e) => setParkingGraceMinutes(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Capacidade Total de Vagas</label>
+              <input
+                type="number"
+                min="1"
+                className="form-input"
+                value={parkingSpots}
+                onChange={(e) => setParkingSpots(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Template Entrada Estacionamento com Código */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Key size={20} color="#f59e0b" />
+            Template WhatsApp (Entrada no Estacionamento & Código de Retirada)
+          </h3>
+
+          <div className="form-group">
+            <label className="form-label">Mensagem Enviada no Check-in com Código de 4 Dígitos</label>
+            <textarea
+              className="form-input form-textarea"
+              style={{ minHeight: '120px' }}
+              value={whatsappParkingTemplate}
+              onChange={(e) => setWhatsappParkingTemplate(e.target.value)}
+              required
+            />
+            <span className="form-hint">
+              Campos automáticos: <code>{'{nome}'}</code>, <code>{'{modelo}'}</code>, <code>{'{placa}'}</code>, <code>{'{codigo}'}</code> (Código de Retirada), <code>{'{entrada}'}</code> (Horário de Entrada), <code>{'{link}'}</code>
+            </span>
           </div>
         </div>
 

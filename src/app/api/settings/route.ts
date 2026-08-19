@@ -15,10 +15,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         id: tenant.id,
         businessName: tenant.name,
+        businessType: tenant.businessType || 'HIBRIDO',
         inactiveDaysLimit: tenant.inactiveDaysLimit,
         whatsappMessageTemplate: tenant.whatsappMessageTemplate,
         whatsappRecallTemplate: tenant.whatsappRecallTemplate,
         whatsappTrackingTemplate: tenant.whatsappTrackingTemplate,
+        whatsappParkingTemplate: tenant.whatsappParkingTemplate,
+        parkingHourlyRate: tenant.parkingHourlyRate,
+        parkingAdditionalHourlyRate: tenant.parkingAdditionalHourlyRate,
+        parkingDailyRate: tenant.parkingDailyRate,
+        parkingGraceMinutes: tenant.parkingGraceMinutes,
+        parkingSpots: tenant.parkingSpots,
         pendingPinChange: tenant.pendingPinChange,
         pinChangeStatus: tenant.pinChangeStatus,
       });
@@ -47,17 +54,37 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { businessName, inactiveDaysLimit, whatsappMessageTemplate, whatsappRecallTemplate, whatsappTrackingTemplate } = body;
+    const {
+      businessName,
+      businessType,
+      inactiveDaysLimit,
+      whatsappMessageTemplate,
+      whatsappRecallTemplate,
+      whatsappTrackingTemplate,
+      whatsappParkingTemplate,
+      parkingHourlyRate,
+      parkingAdditionalHourlyRate,
+      parkingDailyRate,
+      parkingGraceMinutes,
+      parkingSpots,
+    } = body;
 
     const parsedInactiveDays = inactiveDaysLimit !== undefined ? Number.parseInt(String(inactiveDaysLimit), 10) : undefined;
     const safeInactiveDays = (parsedInactiveDays !== undefined && !Number.isNaN(parsedInactiveDays)) ? parsedInactiveDays : undefined;
 
     const updateTenantData: any = {};
     if (businessName !== undefined && businessName !== null) updateTenantData.name = String(businessName);
+    if (businessType && ['LAVA_RAPIDO', 'ESTACIONAMENTO', 'HIBRIDO'].includes(businessType)) updateTenantData.businessType = businessType;
     if (safeInactiveDays !== undefined) updateTenantData.inactiveDaysLimit = safeInactiveDays;
     if (whatsappMessageTemplate !== undefined && whatsappMessageTemplate !== null) updateTenantData.whatsappMessageTemplate = String(whatsappMessageTemplate);
     if (whatsappRecallTemplate !== undefined && whatsappRecallTemplate !== null) updateTenantData.whatsappRecallTemplate = String(whatsappRecallTemplate);
     if (whatsappTrackingTemplate !== undefined && whatsappTrackingTemplate !== null) updateTenantData.whatsappTrackingTemplate = String(whatsappTrackingTemplate);
+    if (whatsappParkingTemplate !== undefined && whatsappParkingTemplate !== null) updateTenantData.whatsappParkingTemplate = String(whatsappParkingTemplate);
+    if (parkingHourlyRate !== undefined) updateTenantData.parkingHourlyRate = parseFloat(parkingHourlyRate) || 10;
+    if (parkingAdditionalHourlyRate !== undefined) updateTenantData.parkingAdditionalHourlyRate = parseFloat(parkingAdditionalHourlyRate) || 5;
+    if (parkingDailyRate !== undefined) updateTenantData.parkingDailyRate = parseFloat(parkingDailyRate) || 50;
+    if (parkingGraceMinutes !== undefined) updateTenantData.parkingGraceMinutes = parseInt(parkingGraceMinutes, 10) || 15;
+    if (parkingSpots !== undefined) updateTenantData.parkingSpots = parseInt(parkingSpots, 10) || 30;
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 

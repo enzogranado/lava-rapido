@@ -224,6 +224,28 @@ export function buildTrackingMessage(
     .replace(/{link}/g, trackingUrl);
 }
 
+// Build parking entry message with pickup code and live tracking
+export function buildParkingEntryMessage(
+  template: string | null | undefined,
+  customerName: string,
+  vehicleModel: string,
+  vehiclePlate: string,
+  pickupCode: string,
+  entryTime: string,
+  trackingUrl?: string
+): string {
+  const defaultTemplate =
+    'Olá, {nome}! 🅿️🚗\n\nSeu veículo {modelo} (placa {placa}) deu entrada no nosso estacionamento às {entrada}.\n\n🔑 Seu Código de Retirada: *{codigo}*\n\nAcompanhe o tempo e valor em tempo real:\n{link}';
+  const tpl = template || defaultTemplate;
+  return tpl
+    .replace(/{nome}/g, customerName)
+    .replace(/{modelo}/g, vehicleModel)
+    .replace(/{placa}/g, vehiclePlate)
+    .replace(/{codigo}/g, pickupCode)
+    .replace(/{entrada}/g, entryTime)
+    .replace(/{link}/g, trackingUrl || '');
+}
+
 // Open WhatsApp directly without async delay
 export function openWhatsAppDirect(phone: string, message?: string) {
   const url = whatsappLink(phone, message);

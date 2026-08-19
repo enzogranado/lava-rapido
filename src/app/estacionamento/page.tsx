@@ -105,6 +105,18 @@ export default function EstacionamentoPage() {
   const [entryNotes, setEntryNotes] = useState('');
   const [entrySubmitting, setEntrySubmitting] = useState(false);
 
+  // Auto-fill state on plate typing
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [autoFilled, setAutoFilled] = useState(false);
+  const [plateSuggestions, setPlateSuggestions] = useState<Array<{
+    plate: string;
+    model: string;
+    color: string;
+    customerName: string;
+    customerPhone: string;
+  }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Modal: Saída de Veículo (Checkout & Código)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<ParkingTicket | null>(null);
@@ -197,6 +209,56 @@ export default function EstacionamentoPage() {
     return hourly + additionalHours * addRate;
   };
 
+  // Handle Plate change with instant auto-lookup from DB
+  const handlePlateChange = async (value: string) => {
+    const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    setEntryPlate(clean);
+    setAutoFilled(false);
+
+    if (clean.length >= 3) {
+      try {
+        setLookupLoading(true);
+        const res = await fetch(`/api/vehicles/lookup?plate=${encodeURIComponent(clean)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.matches && data.matches.length > 0) {
+            setPlateSuggestions(data.matches);
+            setShowSuggestions(true);
+          } else {
+            setPlateSuggestions([]);
+            setShowSuggestions(false);
+          }
+
+          if (data.exactMatch) {
+            setEntryModel(data.exactMatch.model || '');
+            setEntryColor(data.exactMatch.color || '');
+            setEntryCustomerName(data.exactMatch.customerName || '');
+            setEntryCustomerPhone(data.exactMatch.customerPhone || '');
+            setAutoFilled(true);
+            setShowSuggestions(false);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLookupLoading(false);
+      }
+    } else {
+      setPlateSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectSuggestion = (item: { plate: string; model: string; color: string; customerName: string; customerPhone: string }) => {
+    setEntryPlate(item.plate);
+    setEntryModel(item.model || '');
+    setEntryColor(item.color || '');
+    setEntryCustomerName(item.customerName || '');
+    setEntryCustomerPhone(item.customerPhone || '');
+    setAutoFilled(true);
+    setShowSuggestions(false);
+  };
+
   // Open entry modal
   const openEntryModal = () => {
     setEntryPlate('');
@@ -206,6 +268,9 @@ export default function EstacionamentoPage() {
     setEntryCustomerPhone('');
     setEntrySpotNumber('');
     setEntryNotes('');
+    setAutoFilled(false);
+    setPlateSuggestions([]);
+    setShowSuggestions(false);
     setShowEntryModal(true);
   };
 
@@ -702,20 +767,80 @@ export default function EstacionamentoPage() {
             <form onSubmit={handleEntrySubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Placa do Veículo *</label>
+                  <div className="form-group" style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">Placa do Veículo *</label>
+                      {lookupLoading && (
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--color-primary-400)' }}>
+                          Buscando cadastro...
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       className="form-input"
                       placeholder="Ex: ABC1D23"
                       maxLength={8}
                       value={entryPlate}
-                      onChange={(e) => setEntryPlate(e.target.value.toUpperCase())}
+                      onChange={(e) => handlePlateChange(e.target.value)}
+                      onFocus={() => {
+                        if (plateSuggestions.length > 0) setShowSuggestions(true);
+                      }}
                       style={{ fontSize: '1.125rem', fontWeight: 800, fontFamily: 'monospace', letterSpacing: '0.05em' }}
                       required
                       autoFocus
                     />
+
+                    {/* Suggestions dropdown */}
+                    {showSuggestions && plateSuggestions.length > 0 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 50,
+                          background: '#0d1220',
+                          border: '1px solid rgba(56, 189, 248, 0.4)',
+                          borderRadius: '10px',
+                          marginTop: '4px',
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div style={{ padding: '6px 10px', fontSize: '0.6875rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', borderBottom: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                          Veículos cadastrados encontrados (clique para preencher):
+                        </div>
+                        {plateSuggestions.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => selectSuggestion(item)}
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: idx < plateSuggestions.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              transition: 'background 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <div>
+                              <strong style={{ fontFamily: 'monospace', color: '#38bdf8', fontSize: '0.9375rem' }}>{item.plate}</strong>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '0.8125rem', marginLeft: '8px' }}>{item.model}</span>
+                              {item.color && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}> • {item.color}</span>}
+                            </div>
+                            {item.customerName && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.customerName}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   <div className="form-group">
                     <label className="form-label">Modelo do Veículo *</label>
                     <input
@@ -728,6 +853,28 @@ export default function EstacionamentoPage() {
                     />
                   </div>
                 </div>
+
+                {/* Auto-filled Success Banner */}
+                {autoFilled && (
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      background: 'rgba(34, 197, 94, 0.15)',
+                      border: '1px solid rgba(34, 197, 94, 0.35)',
+                      borderRadius: '8px',
+                      color: '#22c55e',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      animation: 'fadeIn 0.2s ease',
+                    }}
+                  >
+                    <Sparkles size={16} />
+                    <span>✨ Veículo e cliente identificados no sistema! Os dados foram preenchidos automaticamente.</span>
+                  </div>
+                )}
 
                 <div className="form-row">
                   <div className="form-group">
